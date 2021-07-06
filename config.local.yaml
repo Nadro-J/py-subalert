@@ -9,3 +9,5 @@ chain:
   url: wss://polkadot.api.onfinality.io/public-ws
   ss58_format: 0
   type_registry_preset: polkadot
+alert:
+  transact_threshold: 50000
