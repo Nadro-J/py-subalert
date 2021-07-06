@@ -7,12 +7,9 @@ class TransactionSubscription:
     def __init__(self):
         self.tweet = Tweet()
         self.config = Configuration()
+        self.threshold = self.config.yaml_file['alert']['transact_threshold']
+        self.substrate = self.config.substrate
 
-        self.substrate = SubstrateInterface(
-            url=self.config.yaml_file['chain']['url'],
-            ss58_format=self.config.yaml_file['chain']['ss58_format'],
-            type_registry_preset=self.config.yaml_file['chain']['type_registry_preset']
-        )
 
     def system_account(self, address):
         """
@@ -89,7 +86,7 @@ class TransactionSubscription:
                 self.tweet.alert(f"{amount_f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n🏦 Balance: {balance}$DOT\nℹ️Reserved: {reserved}\nℹ️miscFrozen: {miscFrozen}\n\nhttps://polkascan.io/polkadot/account/{destination} #Polkadot\n")
                 # tweet_alert(f"{amount_f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n🏦 Balance: {balance}$DOT\nℹ️Reserved: {reserved}\nℹ️miscFrozen: {miscFrozen}\n\nhttps://polkascan.io/polkadot/account/{destination} #Polkadot\n")
 
-    def new_block_sub(self, obj, update_nr, subscription_id):
+    def new_block(self, obj, update_nr, subscription_id):
         """
         :param obj: passed from subscribe_block_headers()
         :param update_nr: passed from subscribe_block_headers()
@@ -97,10 +94,5 @@ class TransactionSubscription:
         :return: When a new block occurs, it is checked against check_transaction to see if the amount transacted is
                  greater than the threshold set.
         """
-        print(f"🔨 New block: {obj['header']['parentHash']}")
-        self.check_transaction(obj['header']['parentHash'], 50000)
-
-
-if __name__ == '__main__':
-    txSub = TransactionSubscription()
-    txSub.substrate.subscribe_block_headers(txSub.new_block_sub, include_author=True)
+        print(f"🔨 New block: {obj['header']['parentHash']} - tx-threshold: {self.threshold}")
+        self.check_transaction(obj['header']['parentHash'], self.threshold)
