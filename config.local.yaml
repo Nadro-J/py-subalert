@@ -1,0 +1,11 @@
+twitter:
+  OAuthHandler:
+    consumer_key: string
+    consumer_secret: string
+  access_token:
+    key: string
+    secret: string
+chain:
+  url: wss://polkadot.api.onfinality.io/public-ws
+  ss58_format: 0
+  type_registry_preset: polkadot
