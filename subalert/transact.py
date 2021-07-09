@@ -1,15 +1,15 @@
 import json
-from substrateinterface import SubstrateInterface
-from subalert.base import Tweet          # local library
+from subalert.base import Tweet  # local library
 from subalert.base import Configuration  # local library
-
+from substrateinterface import SubstrateInterface, ExtrinsicReceipt
+from scalecodec import ScaleBytes, ExtrinsicsDecoder
+from scalecodec.metadata import MetadataDecoder
 class TransactionSubscription:
     def __init__(self):
         self.tweet = Tweet()
         self.config = Configuration()
         self.threshold = self.config.yaml_file['alert']['transact_threshold']
         self.substrate = self.config.substrate
-
 
     def system_account(self, address):
         """
@@ -37,7 +37,7 @@ class TransactionSubscription:
         :return: How much has been sent from one address to another, who it was signed by and the receivers
                  balance, reserved, miscFrozen.
         """
-        result = self.substrate.get_block(block_hash=block_hash)
+        result = self.substrate.get_block(block_hash=block_hash, ignore_decoding_errors=True)
         data = {}
 
         for extrinsic in result['extrinsics']:
@@ -56,35 +56,46 @@ class TransactionSubscription:
                 }
             )
 
-            # Loop through call params
-            for param in extrinsic.params:
-                if param['type'] == 'Compact<Balance>':
-                    if isinstance(param['value'], int):
-                        param['value'] = '{}'.format(param['value'] / 10 ** self.substrate.token_decimals)
-                    else:
-                        param['value'] = '{}'.format(param['value'])
+            receipt = ExtrinsicReceipt(
+                substrate=self.substrate,
+                extrinsic_hash=f"0x{extrinsic.extrinsic_hash}",
+                block_hash=block_hash
+            )
 
-                data[signed_by_address].update({param['name']: param['value']})
-            # print(json.dumps(data, indent=4)) # debugging
+            if not receipt.is_success:
+                print("Extrinsic not successful")
+                return 0
+            else:
 
-            destination = data[signed_by_address]['dest']
-            amount = float(data[signed_by_address]['value'])
-            amount_f = '{0:,.2f}'.format(amount)  # Formatted two decimals with comma/
+                # Loop through call params
+                for param in extrinsic.params:
+                    if param['type'] == 'Compact<Balance>':
+                        if isinstance(param['value'], int):
+                            param['value'] = '{}'.format(param['value'] / 10 ** self.substrate.token_decimals)
+                        else:
+                            param['value'] = '{}'.format(param['value'])
 
-            if amount > threshold:
-                sQuery = self.system_account(destination)['data']
-                balance = sQuery['free'] / 10 ** self.substrate.token_decimals
-                reserved = sQuery['reserved'] / 10 ** self.substrate.token_decimals
-                miscFrozen = sQuery['miscFrozen'] / 10 ** self.substrate.token_decimals
+                    data[signed_by_address].update({param['name']: param['value']})
+                # print(json.dumps(data, indent=4)) # debugging
 
-                print(f"{amount_f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
-                      f"🏦 Balance: {balance}$DOT\n"
-                      f"ℹ️Reserved: {reserved}\n"
-                      f"ℹ️miscFrozen: {miscFrozen}\n\n"
-                      f"https://polkascan.io/polkadot/account/{destination} #Polkadot\n")
+                destination = data[signed_by_address]['dest']
+                amount = float(data[signed_by_address]['value'])
 
-                self.tweet.alert(f"{amount_f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n🏦 Balance: {balance}$DOT\nℹ️Reserved: {reserved}\nℹ️miscFrozen: {miscFrozen}\n\nhttps://polkascan.io/polkadot/account/{destination} #Polkadot\n")
-                # tweet_alert(f"{amount_f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n🏦 Balance: {balance}$DOT\nℹ️Reserved: {reserved}\nℹ️miscFrozen: {miscFrozen}\n\nhttps://polkascan.io/polkadot/account/{destination} #Polkadot\n")
+                if amount > threshold:
+                    account = self.system_account(destination)['data']
+                    balance = account['free'] / 10 ** self.substrate.token_decimals
+                    reserved = account['reserved'] / 10 ** self.substrate.token_decimals
+                    miscFrozen = account['miscFrozen'] / 10 ** self.substrate.token_decimals
+
+                    print(f"💵 {amount:,.2f} $DOT sent to {destination} signed by {signed_by_address}")
+
+                    tweet_body = (f"{amount:,.2f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
+                            f"🏦 Balance: {balance:,.2f}\n"
+                            f"💵 Reserved: {reserved:,.2f}\n"
+                            f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
+                            f"https://polkadot.subscan.io/account/{destination} #Polkadot\n")
+
+                    self.tweet.alert(tweet_body)
 
     def new_block(self, obj, update_nr, subscription_id):
         """
@@ -94,5 +105,5 @@ class TransactionSubscription:
         :return: When a new block occurs, it is checked against check_transaction to see if the amount transacted is
                  greater than the threshold set.
         """
-        print(f"🔨 New block: {obj['header']['parentHash']} - tx-threshold: {self.threshold}")
+        print(f"🔨 New block: {obj['header']['parentHash']}")
         self.check_transaction(obj['header']['parentHash'], self.threshold)
