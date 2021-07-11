@@ -5,3 +5,15 @@
 txSub = TransactionSubscription()
 txSub.substrate.subscribe_block_headers(txSub.new_block_sub, include_author=True)
 ```
+
+#### Current tweets:  
+- Large balance transfers
+- Governance-> Referenda
+- Polkadot Binary Updates
+
+#### In-progress:  
+- Governance -> Proposals, Tips.  
+
+
+
+KSM tip address: `E5djM6u2p67C1LfkSyNDfRnvYwg6HAQxwPB8yK6Q5eAwdjn`
