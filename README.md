@@ -2,17 +2,30 @@
 
 #### Subscribe to transactions >= threshold set in .yaml
 ```python
+from subalert.transact import *
+
 txSub = TransactionSubscription()
 txSub.substrate.subscribe_block_headers(txSub.new_block_sub, include_author=True)
 ```
 
-#### Current tweets:  
+#### Subscribe to referenda
+```python 
+from subalert.referenda import *
+
+referendum = DemocracySubscription()
+referendum.referendum_watch()
+```
+
+#### Currently tweets:  
 - Large balance transfers
-- Governance-> Referenda
+- Governance
+    - Referenda
 - Polkadot Binary Updates
 
 #### In-progress:  
-- Governance -> Proposals, Tips.  
+- Governance
+    - Proposals
+    - Tips.  
 
 
 
