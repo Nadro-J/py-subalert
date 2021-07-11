@@ -30,7 +30,7 @@ class Tweet:
     def alert(self, message):
         try:
             print("🐤 tweet successfully sent!")
-            #self.auth.api.update_status(message)
+            self.auth.api.update_status(message)
         except tweepy.error.TweepError as error:
             if error == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
@@ -61,4 +61,5 @@ class GitWatch:
             print("🔧 new release found!")
             return True
         else:
+            print("🔧 no releases found")
             return False
