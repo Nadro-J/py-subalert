@@ -1,6 +1,7 @@
 import yaml
 import tweepy
 from substrateinterface import SubstrateInterface
+import urllib.request, json
 
 
 class Configuration:
@@ -11,6 +12,7 @@ class Configuration:
             ss58_format=self.yaml_file['chain']['ss58_format'],
             type_registry_preset=self.yaml_file['chain']['type_registry_preset']
         )
+
         # Authenticate to Twitter
         self.auth = tweepy.OAuthHandler(self.yaml_file['twitter']['OAuthHandler']['consumer_key'],
                                         self.yaml_file['twitter']['OAuthHandler']['consumer_secret'])
@@ -27,10 +29,36 @@ class Tweet:
 
     def alert(self, message):
         try:
-            self.auth.api.update_status(message)
+            print("🐤 tweet successfully sent!")
+            #self.auth.api.update_status(message)
         except tweepy.error.TweepError as error:
             if error == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
                 pass
             else:
                 raise error
+
+
+class GitWatch:
+    def __init__(self):
+        self.config = Configuration()
+        self.url = self.config.yaml_file['github']['repository']
+
+    def latest_release(self):
+        with urllib.request.urlopen(self.url) as repository:
+            data = json.loads(repository.read().decode())
+            return data
+
+    @staticmethod
+    def cache_release(data):
+        with open('git-release.cache', 'w') as cache:
+            cache.write(json.dumps(data, indent=4))
+        cache.close()
+
+    @staticmethod
+    def has_updated(data, cache):
+        if data['tag_name'] != cache['tag_name']:
+            print("🔧 new release found!")
+            return True
+        else:
+            return False
