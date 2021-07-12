@@ -29,4 +29,5 @@ referendum.referendum_watch()
 
 
 
-KSM tip address: `E5djM6u2p67C1LfkSyNDfRnvYwg6HAQxwPB8yK6Q5eAwdjn`
+KSM tip address: `E5djM6u2p67C1LfkSyNDfRnvYwg6HAQxwPB8yK6Q5eAwdjn`  
+DOT tip address: `5GLSSnXaukoyf7ZYRWJoJnX9n9cHwCUyEDD8FK58oSPVVJBW`
