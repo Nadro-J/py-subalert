@@ -4,11 +4,13 @@ from subalert.base import Configuration  # local library
 from substrateinterface import SubstrateInterface, ExtrinsicReceipt
 from scalecodec import ScaleBytes, ExtrinsicsDecoder
 from scalecodec.metadata import MetadataDecoder
+
 class TransactionSubscription:
     def __init__(self):
         self.tweet = Tweet()
         self.config = Configuration()
         self.threshold = self.config.yaml_file['alert']['transact_threshold']
+        self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.substrate = self.config.substrate
 
     def system_account(self, address):
@@ -30,7 +32,7 @@ class TransactionSubscription:
         )
         return json.loads(str(result).replace("\'", "\""))
 
-    def check_transaction(self, block_hash, threshold):
+    def check_transaction(self, block_hash, threshold, whale_threshold):
         """
         :param block_hash:
         :param threshold: >= the amount to alert on
@@ -76,7 +78,6 @@ class TransactionSubscription:
                             param['value'] = '{}'.format(param['value'])
 
                     data[signed_by_address].update({param['name']: param['value']})
-                # print(json.dumps(data, indent=4)) # debugging
 
                 destination = data[signed_by_address]['dest']
                 amount = float(data[signed_by_address]['value'])
@@ -87,13 +88,15 @@ class TransactionSubscription:
                     reserved = account['reserved'] / 10 ** self.substrate.token_decimals
                     miscFrozen = account['miscFrozen'] / 10 ** self.substrate.token_decimals
 
-                    print(f"💵 {amount:,.2f} $DOT sent to {destination} signed by {signed_by_address}")
+                    whale_emoji = ''
+                    if balance > whale_threshold or miscFrozen > whale_threshold:
+                        whale_emoji = '🐳'
 
-                    tweet_body = (f"{amount:,.2f} $DOT sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
-                            f"🏦 Balance: {balance:,.2f}\n"
-                            f"💵 Reserved: {reserved:,.2f}\n"
-                            f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
-                            f"https://polkadot.subscan.io/account/{destination} #Polkadot\n")
+                    tweet_body = (f"{amount:,.2f} $DOT successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
+                                  f"🏦 Balance: {balance:,.2f} {whale_emoji}{whale_emoji}\n"
+                                  f"💵 Reserved: {reserved:,.2f}\n"
+                                  f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
+                                  f"https://polkadot.subscan.io/account/{destination} #Polkadot\n")
 
                     self.tweet.alert(tweet_body)
 
@@ -106,4 +109,4 @@ class TransactionSubscription:
                  greater than the threshold set.
         """
         print(f"🔨 New block: {obj['header']['parentHash']}")
-        self.check_transaction(obj['header']['parentHash'], self.threshold)
+        self.check_transaction(obj['header']['parentHash'], self.threshold, self.whale_threshold)
