@@ -1,4 +1,7 @@
-# run on an hourly basis using git-release.cache to check if a new release has been made.
+# run every 59 minutes past the hour (path may vary on system):
+#   * * * * * cd /root/py-subalert && /usr/bin/python3 /root/py-subalert/latest_repo_release.py >> /root/py-subalert/latest_repo_release.log 2>&1
+#
+# Use git-release.cache to check if a new release has been made.
 from subalert.base import GitWatch, Tweet
 import os.path
 import json
