@@ -1,13 +1,16 @@
 twitter:
   OAuthHandler:
-    consumer_key: string
-    consumer_secret: string
+    consumer_key:
+    consumer_secret:
   access_token:
-    key: string
-    secret: string
+    key:
+    secret:
 chain:
   url: wss://polkadot.api.onfinality.io/public-ws
   ss58_format: 0
   type_registry_preset: polkadot
 alert:
-  transact_threshold: 50000
+  transact_threshold: 10000
+  whale_threshold: 500000
+github:
+  repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
