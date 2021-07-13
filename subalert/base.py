@@ -1,6 +1,7 @@
 import yaml
 import tweepy
 from substrateinterface import SubstrateInterface
+from urllib.request import urlopen
 import urllib.request, json
 
 
@@ -22,6 +23,15 @@ class Configuration:
         # Create API object
         self.api = tweepy.API(self.auth)
 
+class CoinGecko:
+    def __init__(self, coin, currency):
+        self.coin = coin
+        self.currency = currency
+        self.url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd&C{currency}"
+
+    def price(self):
+        api_response = json.loads(urlopen(url=self.url, timeout=60).read())
+        return '${:,.2f}'.format(api_response[self.coin][self.currency])
 
 class Tweet:
     def __init__(self):
