@@ -1,8 +1,6 @@
 import json
 from subalert.base import Tweet, Configuration, CoinGecko  # local library
 from substrateinterface import SubstrateInterface, ExtrinsicReceipt
-from scalecodec import ScaleBytes, ExtrinsicsDecoder
-from scalecodec.metadata import MetadataDecoder
 
 class TransactionSubscription:
     def __init__(self):
@@ -12,6 +10,7 @@ class TransactionSubscription:
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.substrate = self.config.substrate
+        self.hashtag = self.config.yaml_file['twitter']['hashtag']
 
     def system_account(self, address):
         """
@@ -92,7 +91,7 @@ class TransactionSubscription:
                     if balance > whale_threshold or miscFrozen > whale_threshold:
                         whale_emoji = '🐳'
 
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko('polkadot', 'usd').price()}) successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
+                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(self.hashtag, 'usd').price()}) successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
                                   f"🏦 Balance: {balance:,.2f} {whale_emoji}{whale_emoji}\n"
                                   f"💵 Reserved: {reserved:,.2f}\n"
                                   f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
