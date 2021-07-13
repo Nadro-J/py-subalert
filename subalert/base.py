@@ -23,6 +23,7 @@ class Configuration:
         # Create API object
         self.api = tweepy.API(self.auth)
 
+
 class CoinGecko:
     def __init__(self, coin, currency):
         self.coin = coin
@@ -33,14 +34,16 @@ class CoinGecko:
         api_response = json.loads(urlopen(url=self.url, timeout=60).read())
         return '${:,.2f}'.format(api_response[self.coin][self.currency])
 
+
 class Tweet:
     def __init__(self):
         self.auth = Configuration()
+        self.hashtag = self.auth.yaml_file['twitter']['hashtag']
 
     def alert(self, message):
         try:
+            self.auth.api.update_status(f"{message} #{self.hashtag}")
             print("🐤 tweet successfully sent!")
-            self.auth.api.update_status(message)
         except tweepy.error.TweepError as error:
             if error == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
