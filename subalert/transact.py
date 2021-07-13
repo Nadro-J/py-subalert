@@ -10,7 +10,7 @@ class TransactionSubscription:
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.substrate = self.config.substrate
-        self.hashtag = self.config.yaml_file['twitter']['hashtag']
+        self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
 
     def system_account(self, address):
         """
@@ -91,11 +91,11 @@ class TransactionSubscription:
                     if balance > whale_threshold or miscFrozen > whale_threshold:
                         whale_emoji = '🐳'
 
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(self.hashtag, 'usd').price()}) successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
+                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(coin=self.hashtag, currency='usd').price()}) successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
                                   f"🏦 Balance: {balance:,.2f} {whale_emoji}{whale_emoji}\n"
                                   f"💵 Reserved: {reserved:,.2f}\n"
                                   f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
-                                  f"https://polkadot.subscan.io/account/{destination}")
+                                  f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     self.tweet.alert(tweet_body)
 

@@ -25,8 +25,8 @@ class Configuration:
 
 
 class CoinGecko:
-    def __init__(self, coin, currency):
-        self.coin = coin
+    def __init__(self, coin: str, currency):
+        self.coin = coin.lower()
         self.currency = currency
         self.url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd&C{currency}"
 
