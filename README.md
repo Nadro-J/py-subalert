@@ -19,7 +19,7 @@ referendum.referendum_watch()
 #### Roadmap  
 - Large balance transfers ✅
 - Governance
-    - Referenda 🔄
+    - Referenda 🔄✅ (complete, but pending testing for when live referenda proposals come in)
     - Council
     - Proposals 
     - Tips
