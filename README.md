@@ -16,16 +16,18 @@ referendum = DemocracySubscription()
 referendum.referendum_watch()
 ```
 
-#### Currently tweets:  
-- Large balance transfers
+#### Roadmap  
+- Large balance transfers ✅
 - Governance
-    - Referenda
-- Polkadot Binary Updates
-
-#### In-progress:  
-- Governance
-    - Proposals
-    - Tips.  
+    - Referenda 🔄
+    - Council
+    - Proposals 
+    - Tips
+    - Bounties
+- Staking
+    - Total stake per era (report the difference from the previous era)
+    - Monitor changes to Validator commission 🔄
+- Polkadot Binary Updates ✅
 
 
 
