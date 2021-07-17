@@ -16,6 +16,14 @@ referendum = DemocracySubscription()
 referendum.referendum_watch()
 ```
 
+#### Monitor validator commission
+```python
+from subalert.validator import *
+
+validators = ValidatorWatch()
+validators.has_commission_updated()
+```
+
 #### Roadmap  
 - Large balance transfers ✅
 - Governance
