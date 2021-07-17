@@ -24,6 +24,38 @@ class Configuration:
         self.api = tweepy.API(self.auth)
 
 
+class Queue:
+    def __init__(self):
+        self.items = []
+
+    def is_empty(self):
+        return self.items == []
+
+    def enqueue(self, item):
+        self.items.insert(0, item)
+
+    def dequeue(self):
+        return self.items.pop()
+
+    def size(self):
+        return len(self.items)
+
+
+class Utils:
+    @staticmethod
+    def cache_data(filename, data):
+        with open(f"{filename}", 'w') as cache:
+            cache.write(json.dumps(data, indent=4))
+        cache.close()
+
+    @staticmethod
+    def open_cache(filename):
+        with open(filename, 'r') as cache:
+            cached_file = json.loads(cache.read())
+            cache.close()
+        return cached_file
+
+
 class CoinGecko:
     def __init__(self, coin: str, currency):
         self.coin = coin.lower()
