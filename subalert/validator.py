@@ -11,6 +11,17 @@ class ValidatorWatch:
         self.queue = Queue()
         self.substrate = self.config.substrate
 
+    def get_identity(self, address):
+        result = self.substrate.query_map(
+            module='Identity',
+            storage_function='IdentityOf')
+
+        for identity_address, information in result:
+
+           # print(identity_address.value, information)
+            if address == identity_address.value:
+                return information.value
+
     def get_current_commission(self):
         validators_list = {}
         result = self.substrate.query_map(
