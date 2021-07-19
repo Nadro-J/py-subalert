@@ -11,16 +11,39 @@ class ValidatorWatch:
         self.queue = Queue()
         self.substrate = self.config.substrate
 
-    def get_identity(self, address):
+    def check_super_of(self, address):
+        result = self.substrate.query(
+            module='Identity',
+            storage_function='SuperOf',
+            params=[address])
+
+        if result.value is not None:
+            return result.value[0]
+        else:
+            return 0
+
+    def check_identity(self, address):
         result = self.substrate.query_map(
             module='Identity',
             storage_function='IdentityOf')
 
-        for identity_address, information in result:
+        super_of = self.check_super_of(address)
+        if super_of:
+            address = super_of
 
-           # print(identity_address.value, information)
+        for identity_address, information in result:
+            identification = ''
+
             if address == identity_address.value:
-                return information.value
+                for identity_type, values in information.value['info'].items():
+                    if 'display' in identity_type or 'twitter' in identity_type:
+                        for value_type, value in values.items():
+                            if identity_type == 'display' and value_type == 'Raw':
+                                identification += f"🆔 {value} "
+
+                            if identity_type == 'twitter' and value_type == 'Raw':
+                                identification += f"🐦 {value}"
+                return identification
 
     def get_current_commission(self):
         validators_list = {}
@@ -49,32 +72,41 @@ class ValidatorWatch:
         # use DeepDiff to check if any values have changed since we last checked.
         difference = DeepDiff(cached_commission_data, commission_data, ignore_order=True).to_json()
 
-        if difference != '{ }':
-            result = json.loads(difference)
+        result = json.loads(difference)
 
-            # format DeepDiff into usable json
-            for obj, attributes in result['values_changed'].items():
-                address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
-                validators_list.update({address: attributes})
+        # format DeepDiff into usable json
+        for obj, attributes in result['values_changed'].items():
+            address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
+            validators_list.update({address: attributes})
 
-            for validator_address, changed_attributes in validators_list.items():
-                old_value = float(f"{100 * float(changed_attributes['old_value'])/float(1000000000):,.2f}")
-                new_value = float(f"{100 * float(changed_attributes['new_value'])/float(1000000000):,.2f}")
+        for validator_address, changed_attributes in validators_list.items():
+            old_value = float(f"{100 * float(changed_attributes['old_value']) / float(1000000000):,.2f}")
+            new_value = float(f"{100 * float(changed_attributes['new_value']) / float(1000000000):,.2f}")
 
-                if old_value < new_value:
-                    change = f"⬆️increased by: +{new_value - old_value}%"
+            # check identity of validator
+            identity = self.check_identity(validator_address)
+            if identity is None:
+                identity = f"🆔 Unknown"
 
-                if old_value > new_value:
-                    change = f"⬇️decreased by: -{old_value - new_value}%"
 
-                tweet_body = (f"🕵️{validator_address} has updated their commission from {old_value}% to {new_value}%.\n\n"
-                              f"{change}")
+            if old_value < new_value:
+                change = (f"{identity}\n"
+                          f"⬆️increased by: +{new_value - old_value}%")
 
-                self.queue.enqueue(tweet_body)
+            if old_value > new_value:
+                change = (f"{identity}\n"
+                          f"⬇️decreased by: -{old_value - new_value}%")
 
-            # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
-            # requests.
-            if self.queue.size() > 1:
-                for i in self.queue.items:
-                    print(i)
-                    time.sleep(5)
+            tweet_body = (
+                f"🕵️{validator_address} has updated their commission from {old_value}% to {new_value}%.\n\n"
+                f"{change}\n"
+                f"--------------------\n")
+
+            self.queue.enqueue(tweet_body)
+
+        # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
+        # requests.
+        if self.queue.size() >= 1:
+            for i in self.queue.items:
+                self.tweet.alert(i)
+                time.sleep(5)
