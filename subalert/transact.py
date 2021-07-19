@@ -81,7 +81,8 @@ class TransactionSubscription:
                 destination = data[signed_by_address]['dest']
                 amount = float(data[signed_by_address]['value'])
 
-                if amount > threshold:
+                # ignore transactions if destination = signed_by_address
+                if amount > threshold and destination != signed_by_address:
                     account = self.system_account(destination)['data']
                     balance = account['free'] / 10 ** self.substrate.token_decimals
                     reserved = account['reserved'] / 10 ** self.substrate.token_decimals
