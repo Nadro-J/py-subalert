@@ -74,6 +74,12 @@ class ValidatorWatch:
 
         result = json.loads(difference)
 
+        if len(result) == 0:
+            print("🔧 No changes to commission have been found since the last execution")
+            return
+
+        print("🔧 changes have been found since the last time has_commission_updated was invoked")
+
         # format DeepDiff into usable json
         for obj, attributes in result['values_changed'].items():
             address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
@@ -88,25 +94,24 @@ class ValidatorWatch:
             if identity is None:
                 identity = f"🆔 Unknown"
 
-
-            if old_value < new_value:
+            if new_value > old_value:
                 change = (f"{identity}\n"
-                          f"⬆️increased by: +{new_value - old_value}%")
+                          f"⬆️increased by: +{new_value - old_value:,.2f}%")
 
-            if old_value > new_value:
+            if new_value < old_value:
                 change = (f"{identity}\n"
-                          f"⬇️decreased by: -{old_value - new_value}%")
+                          f"⬇️decreased by: -{old_value - new_value:,.2f}%")
 
             tweet_body = (
-                f"🕵️{validator_address} has updated their commission from {old_value}% to {new_value}%.\n\n"
-                f"{change}\n"
-                f"--------------------\n")
+                f"🕵️{validator_address} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
+                f"{change}\n\n"
+                f"https://polkadot.subscan.io/validator/{validator_address}")
 
             self.queue.enqueue(tweet_body)
 
         # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
         # requests.
         if self.queue.size() >= 1:
-            for i in self.queue.items:
-                self.tweet.alert(i)
+            for tweet in self.queue.items:
+                self.tweet.alert(tweet)
                 time.sleep(5)
