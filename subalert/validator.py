@@ -115,3 +115,5 @@ class ValidatorWatch:
             for tweet in self.queue.items:
                 self.tweet.alert(tweet)
                 time.sleep(5)
+
+        Utils.cache_data('validators-commission.cache', commission_data)
