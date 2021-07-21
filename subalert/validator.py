@@ -76,7 +76,7 @@ class ValidatorWatch:
 
         if len(result) == 0:
             print("🔧 No changes to commission have been found since the last execution")
-            return
+            exit(1)
 
         print("🔧 changes have been found since the last time has_commission_updated was invoked")
 
