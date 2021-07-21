@@ -30,11 +30,11 @@ validators.has_commission_updated()
     - Referenda 🔄✅ (complete, but pending testing for when live referenda proposals come in)
     - Council
     - Proposals 
-    - Tips
+    - Tips 🔄
     - Bounties
 - Staking
     - Total stake per era (report the difference from the previous era)
-    - Monitor changes to Validator commission 🔄
+    - Monitor changes to Validator commission ✅
 - Polkadot Binary Updates ✅
 
 
