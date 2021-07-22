@@ -62,6 +62,7 @@ class ValidatorWatch:
     def has_commission_updated(self):
         commission_data = self.get_current_commission()
         _1kv_candidates = self.utils.get_1kv_candidates()
+        value_difference = float()
         validators_list = {}
         change = ""
 
@@ -110,23 +111,27 @@ class ValidatorWatch:
                         identity = f"🆔 Unknown"
 
                     if new_value > old_value:
+                        value_difference = float(f'{new_value - old_value:,.2f}')
                         change = (f"{identity}\n"
-                                  f"⬆️increased by: +{new_value - old_value:,.2f}%")
+                                  f"⬆️increased by: +{value_difference}%")
 
                     if new_value < old_value:
+                        value_difference = float(f'{old_value - new_value:,.2f}')
                         change = (f"{identity}\n"
-                                  f"⬇️decreased by: -{old_value - new_value:,.2f}%")
+                                  f"⬇️decreased by: -{value_difference}%")
 
                     stamp_1kv = ''
                     if validator_address in _1kv_candidates:
                         stamp_1kv = '#1KV'
 
-                    tweet_body = (
-                        f"🕵️{validator_address} {stamp_1kv} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
-                        f"{change}\n\n"
-                        f"https://polkadot.subscan.io/validator/{validator_address}")
+                    # only tweet when the commission has been changed > 3%.
+                    if value_difference > 3:
+                        tweet_body = (
+                            f"🕵️{validator_address} {stamp_1kv} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
+                            f"{change}\n\n"
+                            f"https://polkadot.subscan.io/validator/{validator_address}")
 
-                    self.queue.enqueue(tweet_body)
+                        self.queue.enqueue(tweet_body)
 
                 # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
                 # requests.
@@ -134,5 +139,4 @@ class ValidatorWatch:
                     for tweet in self.queue.items:
                         self.tweet.alert(tweet)
                         time.sleep(5)
-
-                Utils.cache_data('validators-commission.cache', commission_data)
+                    Utils.cache_data('validators-commission.cache', commission_data)
