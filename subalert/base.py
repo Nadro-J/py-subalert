@@ -42,6 +42,9 @@ class Queue:
 
 
 class Utils:
+    def __init__(self):
+        self.auth = Configuration()
+
     @staticmethod
     def cache_data(filename, data):
         with open(f"{filename}", 'w') as cache:
@@ -54,6 +57,17 @@ class Utils:
             cached_file = json.loads(cache.read())
             cache.close()
         return cached_file
+
+    def get_1kv_candidates(self):
+        candidates = []
+        header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
+        request = urllib.request.Request(self.auth.yaml_file['validator_programme_url'], headers=header)
+        response = json.loads(urlopen(request).read())
+
+        for candidate in response:
+            candidates.append(candidate['stash'])
+
+        return candidates
 
 
 class CoinGecko:
