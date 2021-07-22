@@ -9,6 +9,7 @@ class ValidatorWatch:
         self.tweet = Tweet()
         self.config = Configuration()
         self.queue = Queue()
+        self.utils = Utils()
         self.substrate = self.config.substrate
 
     def check_super_of(self, address):
@@ -60,6 +61,7 @@ class ValidatorWatch:
 
     def has_commission_updated(self):
         commission_data = self.get_current_commission()
+        _1kv_candidates = self.utils.get_1kv_candidates()
         validators_list = {}
         change = ""
 
@@ -80,40 +82,57 @@ class ValidatorWatch:
 
         print("🔧 changes have been found since the last time has_commission_updated was invoked")
 
-        # format DeepDiff into usable json
-        for obj, attributes in result['values_changed'].items():
-            address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
-            validators_list.update({address: attributes})
+        # need to sort out what happens when a new validator is found,.5T
+        for key, value in result.items():
+            if key == 'dictionary_item_added':
+                for new_address in value:
+                    address = new_address.replace("root['", "").replace("']", "").replace("['commission", "")
+                    tweet_body = (
+                            f"👨‍🔧 new address found, {address}\n"
+                            f"{self.check_identity(address)}\n\n"
+                            f"https://polkadot.subscan.io/validator/{address}")
 
-        for validator_address, changed_attributes in validators_list.items():
-            old_value = float(f"{100 * float(changed_attributes['old_value']) / float(1000000000):,.2f}")
-            new_value = float(f"{100 * float(changed_attributes['new_value']) / float(1000000000):,.2f}")
+                    self.queue.enqueue(tweet_body)
 
-            # check identity of validator
-            identity = self.check_identity(validator_address)
-            if identity is None:
-                identity = f"🆔 Unknown"
+            elif key == 'values_changed':
+                # format DeepDiff into usable json
+                for obj, attributes in result['values_changed'].items():
+                    address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
+                    validators_list.update({address: attributes})
 
-            if new_value > old_value:
-                change = (f"{identity}\n"
-                          f"⬆️increased by: +{new_value - old_value:,.2f}%")
+                for validator_address, changed_attributes in validators_list.items():
+                    old_value = float(f"{100 * float(changed_attributes['old_value']) / float(1000000000):,.2f}")
+                    new_value = float(f"{100 * float(changed_attributes['new_value']) / float(1000000000):,.2f}")
 
-            if new_value < old_value:
-                change = (f"{identity}\n"
-                          f"⬇️decreased by: -{old_value - new_value:,.2f}%")
+                    # check identity of validator
+                    identity = self.check_identity(validator_address)
+                    if identity is None:
+                        identity = f"🆔 Unknown"
 
-            tweet_body = (
-                f"🕵️{validator_address} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
-                f"{change}\n\n"
-                f"https://polkadot.subscan.io/validator/{validator_address}")
+                    if new_value > old_value:
+                        change = (f"{identity}\n"
+                                  f"⬆️increased by: +{new_value - old_value:,.2f}%")
 
-            self.queue.enqueue(tweet_body)
+                    if new_value < old_value:
+                        change = (f"{identity}\n"
+                                  f"⬇️decreased by: -{old_value - new_value:,.2f}%")
 
-        # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
-        # requests.
-        if self.queue.size() >= 1:
-            for tweet in self.queue.items:
-                self.tweet.alert(tweet)
-                time.sleep(5)
+                    stamp_1kv = ''
+                    if validator_address in _1kv_candidates:
+                        stamp_1kv = '#1KV'
 
-        Utils.cache_data('validators-commission.cache', commission_data)
+                    tweet_body = (
+                        f"🕵️{validator_address} {stamp_1kv} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
+                        f"{change}\n\n"
+                        f"https://polkadot.subscan.io/validator/{validator_address}")
+
+                    self.queue.enqueue(tweet_body)
+
+                # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
+                # requests.
+                if self.queue.size() >= 1:
+                    for tweet in self.queue.items:
+                        self.tweet.alert(tweet)
+                        time.sleep(5)
+
+                Utils.cache_data('validators-commission.cache', commission_data)
