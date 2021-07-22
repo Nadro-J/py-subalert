@@ -16,3 +16,4 @@ alert:
   whale_threshold: 500000
 github:
   repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
+validator_programme_url: https://polkadot.w3f.community/candidates
