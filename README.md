@@ -1,5 +1,42 @@
 # py-subalert
 
+On-chain analytics delivered from substrate based eco-systems to Twitter.  
+
+Note: This library is will mature over time and certain areas may be re-developed to further improve alerts. The current scope is Twitter, but with the eventual plan of creating a web interface displaying real-time data once the library has matured enough.
+
+[PolkadotTxs](https://twitter.com/PolkadotTxs) 
+```yaml 
+chain:
+  url: wss://polkadot.api.onfinality.io/public-ws
+  ss58_format: 0
+  type_registry_preset: polkadot
+  ticker: DOT
+alert:
+  transact_threshold: 25000
+  whale_threshold: 500000
+github:
+  repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
+validator_programme_url: https://polkadot.w3f.community/candidates
+```
+---
+
+[KusamaTxs](https://twitter.com/KusamaTxs)
+```yaml
+chain:
+  url: wss://kusama-rpc.polkadot.io/
+  ss58_format: 0
+  type_registry_preset: kusama
+  ticker: DOT
+alert:
+  transact_threshold: 250
+  whale_threshold: 250000
+github:
+  repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
+validator_programme_url: https://kusama.w3f.community/candidates
+```
+
+### Examples
+
 #### Subscribe to transactions >= threshold set in .yaml
 ```python
 from subalert.transact import *
@@ -24,7 +61,9 @@ validators = ValidatorWatch()
 validators.has_commission_updated()
 ```
 
-#### Roadmap  
+---
+
+### Roadmap  
 - Large balance transfers ✅
 - Governance
     - Referenda 🔄✅ (complete, but pending testing for when live referenda proposals come in)
