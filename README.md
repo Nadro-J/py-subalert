@@ -65,8 +65,10 @@ validators.has_commission_updated()
 
 ### Roadmap  
 - Large balance transfers ✅
-- Governance
-    - Referenda 🔄✅ (complete, but pending testing for when live referenda proposals come in)
+![](https://i.imgur.com/UK79bb8.png)
+- Governance  
+    - Referenda ✅   
+    ![](https://i.imgur.com/7wdmhyg.png)
     - Council
     - Proposals 
     - Tips 🔄
@@ -74,7 +76,9 @@ validators.has_commission_updated()
 - Staking
     - Total stake per era (report the difference from the previous era)
     - Monitor changes to Validator commission ✅
+    ![](https://i.imgur.com/JY67kkv.png)
 - Polkadot Binary Updates ✅
+![](https://i.imgur.com/lOVP4D5.png)
 
 
 
