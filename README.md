@@ -75,9 +75,9 @@ validators.has_commission_updated()
     - Bounties
 - Staking
     - Total stake per era (report the difference from the previous era)
-    - Monitor changes to Validator commission ✅
+    - Monitor changes to Validator commission ✅  
     ![](https://i.imgur.com/JY67kkv.png)
-- Polkadot Binary Updates ✅
+- Polkadot Binary Updates ✅  
 ![](https://i.imgur.com/lOVP4D5.png)
 
 
