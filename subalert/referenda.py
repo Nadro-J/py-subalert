@@ -61,7 +61,7 @@ class DemocracySubscription:
                               f"end: {end} - delay: {delay}\n"
                               f"threshold: {threshold}\n"
                               f"✅AYE: {ayes / 10 ** self.substrate.token_decimals:,.2f} - ❌NAY: {nays / 10 ** self.substrate.token_decimals:,.2f}\n\n"
-                              f"https://polkadot.polkassembly.io/referendum/{obj.value - 1} #Polkadot")
+                              f"https://polkadot.polkassembly.io/referendum/{obj.value - 1}")
 
                 self.tweet.alert(tweet_body)
 
@@ -73,7 +73,9 @@ class DemocracySubscription:
         """
         :return: total number of referendums
         """
+
         return int(str(self.substrate.query(
             module='Democracy',
             storage_function='ReferendumCount',
             subscription_handler=self.new_referendum)))
+
