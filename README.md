@@ -2,7 +2,7 @@
 
 On-chain analytics delivered from substrate based eco-systems to Twitter.  
 
-Note: This library is will mature over time and certain areas may be re-developed to further improve alerts. The current scope is Twitter, but with the eventual plan of creating a web interface displaying real-time data once the library has matured enough.
+Note: This library will mature over time and certain areas may be re-developed to further improve alerts. The current scope is Twitter, but with the eventual plan of creating a web interface displaying real-time data once the library has matured enough.
 
 [PolkadotTxs](https://twitter.com/PolkadotTxs) 
 ```yaml 
@@ -26,7 +26,7 @@ chain:
   url: wss://kusama-rpc.polkadot.io/
   ss58_format: 0
   type_registry_preset: kusama
-  ticker: DOT
+  ticker: KSM
 alert:
   transact_threshold: 250
   whale_threshold: 250000
@@ -37,7 +37,7 @@ validator_programme_url: https://kusama.w3f.community/candidates
 
 ### Examples
 
-#### Subscribe to transactions >= threshold set in .yaml
+##### Subscribe to transactions >= threshold set in .yaml
 ```python
 from subalert.transact import *
 
@@ -45,7 +45,7 @@ txSub = TransactionSubscription()
 txSub.substrate.subscribe_block_headers(txSub.new_block_sub, include_author=True)
 ```
 
-#### Subscribe to referenda
+##### Subscribe to referenda
 ```python 
 from subalert.referenda import *
 
@@ -53,7 +53,7 @@ referendum = DemocracySubscription()
 referendum.referendum_watch()
 ```
 
-#### Monitor validator commission
+##### Monitor validator commission
 ```python
 from subalert.validator import *
 
