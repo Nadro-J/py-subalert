@@ -64,7 +64,7 @@ validators.has_commission_updated()
 ---
 
 ### Roadmap  
-- Large balance transfers ✅
+- Large balance transfers ✅  
 ![](https://i.imgur.com/UK79bb8.png)
 - Governance  
     - Referenda ✅   
