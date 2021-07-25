@@ -1,5 +1,5 @@
 import json
-from subalert.base import Tweet, Configuration, CoinGecko  # local library
+from subalert.base import Tweet, Configuration, CoinGecko, Numbers  # local library
 from substrateinterface import SubstrateInterface, ExtrinsicReceipt
 
 class TransactionSubscription:
@@ -83,19 +83,29 @@ class TransactionSubscription:
 
                 # ignore transactions if destination = signed_by_address
                 if amount > threshold and destination != signed_by_address:
-                    account = self.system_account(destination)['data']
-                    balance = account['free'] / 10 ** self.substrate.token_decimals
-                    reserved = account['reserved'] / 10 ** self.substrate.token_decimals
-                    miscFrozen = account['miscFrozen'] / 10 ** self.substrate.token_decimals
+                    # Sender
+                    sender_account = self.system_account(signed_by_address)['data']
+                    sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
+                    sender_locked = sender_account['miscFrozen'] / 10 ** self.substrate.token_decimals
 
-                    whale_emoji = ''
-                    if balance > whale_threshold or miscFrozen > whale_threshold:
-                        whale_emoji = '🐳'
+                    # Destination
+                    destination_account = self.system_account(destination)['data']
+                    destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
+                    destination_locked = destination_account['miscFrozen'] / 10 ** self.substrate.token_decimals
 
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(coin=self.hashtag, currency='usd').price()}) successfully sent to {destination}\n\nsigned by: {signed_by_address}\n\n"
-                                  f"🏦 Balance: {balance:,.2f} {whale_emoji}{whale_emoji}\n"
-                                  f"💵 Reserved: {reserved:,.2f}\n"
-                                  f"💵 miscFrozen: {miscFrozen:,.2f}\n\n"
+                    s_whale_emoji, r_whale_emoji = '', ''
+                    if sender_balance > whale_threshold or sender_locked > whale_threshold:
+                        s_whale_emoji = '🐳'
+                    if destination_balance > whale_threshold or destination_locked > whale_threshold:
+                        r_whale_emoji = '🐳'
+
+                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(coin=self.hashtag, currency='usd').price()}) successfully sent to {destination}\n\n"
+                                  f"-- [ Details ] ---\n"
+                                  f"🏦 Sender balance: {Numbers(sender_balance).human_format()} {s_whale_emoji}{s_whale_emoji}\n"
+                                  f"🔒 Locked: {Numbers(sender_locked).human_format()}\n\n"
+                                  f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} {r_whale_emoji}{r_whale_emoji}\n"
+                                  f"🔒 Locked: {Numbers(destination_locked).human_format()}\n"
+                                  f"-----------------\n\n"
                                   f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     self.tweet.alert(tweet_body)
