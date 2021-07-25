@@ -28,7 +28,7 @@ chain:
   type_registry_preset: kusama
   ticker: KSM
 alert:
-  transact_threshold: 250
+  transact_threshold: 1000
   whale_threshold: 250000
 github:
   repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
