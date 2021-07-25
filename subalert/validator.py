@@ -11,6 +11,7 @@ class ValidatorWatch:
         self.queue = Queue()
         self.utils = Utils()
         self.substrate = self.config.substrate
+        self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
 
     def check_super_of(self, address):
         result = self.substrate.query(
@@ -91,7 +92,7 @@ class ValidatorWatch:
                     tweet_body = (
                             f"👨‍🔧 new address found, {address}\n"
                             f"{self.check_identity(address)}\n\n"
-                            f"https://polkadot.subscan.io/validator/{address}")
+                            f"https://{self.hashtag.lower()}.subscan.io/validator/{address}")
 
                     self.queue.enqueue(tweet_body)
 
@@ -129,7 +130,7 @@ class ValidatorWatch:
                         tweet_body = (
                             f"🕵️{validator_address} {stamp_1kv} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
                             f"{change}\n\n"
-                            f"https://polkadot.subscan.io/validator/{validator_address}")
+                            f"https://{self.hashtag.lower()}.subscan.io/validator/{validator_address}")
 
                         self.queue.enqueue(tweet_body)
 
