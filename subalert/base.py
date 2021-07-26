@@ -24,6 +24,19 @@ class Configuration:
         self.api = tweepy.API(self.auth)
 
 
+class Numbers:
+    def __init__(self, number):
+        self.number = number
+
+    def human_format(self):
+        magnitude = 0
+        while abs(self.number) >= 1000:
+            magnitude += 1
+            self.number /= 1000.0
+        # add more suffixes if you need them
+        return '%.2f%s' % (self.number, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
+
+
 class Queue:
     def __init__(self):
         self.items = []
