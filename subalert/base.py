@@ -2,7 +2,7 @@ import yaml
 import tweepy
 from substrateinterface import SubstrateInterface
 from urllib.request import urlopen
-import urllib.request, json
+import urllib.request, json, os
 
 
 class Configuration:
@@ -27,6 +27,7 @@ class Configuration:
 class Numbers:
     def __init__(self, number):
         self.number = number
+        self.magnitude = int()
 
     def human_format(self):
         magnitude = 0
@@ -35,6 +36,13 @@ class Numbers:
             self.number /= 1000.0
         # add more suffixes if you need them
         return '%.2f%s' % (self.number, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
+
+    def large_to_dec(self):
+        magnitude = 0
+        while abs(self.number) >= 1000:
+            magnitude += 1
+            self.number /= 1000.0
+        return '%.2f' % self.number
 
 
 class Queue:
