@@ -5,11 +5,14 @@ import matplotlib.image as image
 import matplotlib.cbook as cbook
 import os.path
 
+
 class EraAnalysis:
     def __init__(self):
         self.tweet = Tweet()
         self.config = Configuration()
         self.substrate = self.config.substrate
+        self.hashtag = self.config.yaml_file['twitter']['hashtag']
+        self.ticker = self.config.yaml_file['chain']['ticker']
 
     def era_total_stake(self):
         result = self.substrate.query_map(
@@ -28,7 +31,7 @@ class EraAnalysis:
         for era, value in sorted(sort_orders):
             eras.append(era), values.append(float(Numbers(int(value)).large_to_dec()))
 
-        with cbook.get_sample_data(os.path.abspath('img/ksm-canary.png')) as file:
+        with cbook.get_sample_data(os.path.abspath('logos/kusama.png')) as file:
             img = image.imread(file)
 
         fig, ax = plt.subplots()
@@ -36,8 +39,8 @@ class EraAnalysis:
         ax.set_xticks(ax.get_xticks()[::5])
 
         fig.autofmt_xdate()
-        plt.title('Kusama - Total stake over 84 eras')
-        plt.ylabel('Total stake (MKSM)')
+        plt.title(f"{self.hashtag} - Total stake over 84 eras")
+        plt.ylabel(f"Total stake (M{self.ticker})")
         plt.xlabel('Era(s)')
         fig.figimage(img, 40, -40, zorder=3, alpha=.1, resize=False)
         plt.savefig('TotalStake84Eras.png')
