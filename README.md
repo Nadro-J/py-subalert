@@ -61,6 +61,14 @@ validators = ValidatorWatch()
 validators.has_commission_updated()
 ```
 
+##### Stake on the network over 84 Eras
+```python
+from subalert.eras import *
+
+era = EraAnalysis()
+era.era_84_graph()
+```
+
 ---
 
 ### Roadmap  
