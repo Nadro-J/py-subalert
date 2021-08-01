@@ -83,6 +83,8 @@ class TransactionSubscription:
 
                 # ignore transactions if destination = signed_by_address
                 if amount > threshold and destination != signed_by_address:
+                    price = CoinGecko(coin=self.hashtag, currency='usd').price()
+
                     # Sender
                     sender_account = self.system_account(signed_by_address)['data']
                     sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
@@ -99,13 +101,18 @@ class TransactionSubscription:
                     if destination_balance > whale_threshold or destination_locked > whale_threshold:
                         r_whale_emoji = '🐳'
 
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({CoinGecko(coin=self.hashtag, currency='usd').price()}) successfully sent to {destination}\n\n"
-                                  f"-- [ Details ] ---\n"
-                                  f"🏦 Sender balance: {Numbers(sender_balance).human_format()} {s_whale_emoji}{s_whale_emoji}\n"
-                                  f"🔒 Locked: {Numbers(sender_locked).human_format()}\n\n"
-                                  f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} {r_whale_emoji}{r_whale_emoji}\n"
-                                  f"🔒 Locked: {Numbers(destination_locked).human_format()}\n"
-                                  f"-----------------\n\n"
+                    usd_sender_balance = sender_balance * float(price.replace('$', ''))
+                    usd_sender_locked = sender_locked * float(price.replace('$', ''))
+
+                    usd_destination_balance = destination_balance * float(price.replace('$', ''))
+                    usd_destination_locked = destination_locked * float(price.replace('$', ''))
+                    usd_amount = amount * float(price.replace('$', ''))
+
+                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({price} - ${Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
+                                  f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                                  f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
+                                  f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                                  f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
                                   f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     self.tweet.alert(tweet_body)
