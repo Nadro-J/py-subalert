@@ -31,7 +31,7 @@ class EraAnalysis:
         for era, value in sorted(sort_orders):
             eras.append(era), values.append(float(Numbers(int(value)).large_to_dec()))
 
-        with cbook.get_sample_data(os.path.abspath('logos/kusama.png')) as file:
+        with cbook.get_sample_data(os.path.abspath(f"logos/{self.hashtag}.png")) as file:
             img = image.imread(file)
 
         fig, ax = plt.subplots()
