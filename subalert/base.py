@@ -35,7 +35,7 @@ class Numbers:
             magnitude += 1
             self.number /= 1000.0
         # add more suffixes if you need them
-        return '%.2f%s' % (self.number, ['', 'K', 'M', 'G', 'T', 'P'][magnitude])
+        return '%.2f%s' % (self.number, ['', 'K', 'M', 'B', 'T', 'P'][magnitude])
 
     def large_to_dec(self):
         magnitude = 0
