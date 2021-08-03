@@ -1,4 +1,4 @@
-from subalert.base import Tweet, Configuration, Numbers  # local library
+from subalert.base import Tweet, Configuration, Numbers, CoinGecko  # local library
 from subalert.base import Configuration  # local library
 import matplotlib.pyplot as plt
 import matplotlib.image as image
@@ -29,18 +29,44 @@ class EraAnalysis:
         sort_orders = sorted(era_data.items(), key=lambda _era: _era[0], reverse=True)
 
         for era, value in sorted(sort_orders):
-            eras.append(era), values.append(float(Numbers(int(value)).large_to_dec()))
+            eras.append(era), values.append(float(Numbers(int(value) / 10 ** self.substrate.token_decimals).large_to_dec()))
 
         with cbook.get_sample_data(os.path.abspath(f"logos/{self.hashtag}.png")) as file:
             img = image.imread(file)
+
+        total_eras = len(eras) - 1
+        price = CoinGecko(coin=self.hashtag, currency='usd').price()
+        current_era_index = eras[total_eras]
+        current_era_stake = Numbers(int(era_data[current_era_index]) / 10 ** self.substrate.token_decimals).human_format()
+        previous_era_index = eras[total_eras - 1]
+        usd_stake_value = int(era_data[current_era_index]) / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
+        era_difference = int(era_data[current_era_index]) - int(era_data[previous_era_index])
+        usd_era_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
+
+        era_diff_text = ""
+        if era_difference < 0:
+            era_diff_text = f"In the last 24hrs, ⬇️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} (${Numbers(abs(usd_era_difference)).human_format()}) ${self.ticker} were unbonded."
+        elif era_difference >= 0:
+            era_diff_text = f"In the last 24hrs, ⬆️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} (${Numbers(usd_era_difference).human_format()}) ${self.ticker} were bonded."
 
         fig, ax = plt.subplots()
         ax.plot_date(eras, values, marker='.', linestyle='-', color="#e6007a")
         ax.set_xticks(ax.get_xticks()[::5])
 
-        fig.autofmt_xdate()
-        plt.title(f"{self.hashtag} - Total stake over 84 eras")
+        plt.title(f"{self.hashtag} - total stake over 84 eras")
         plt.ylabel(f"Total stake (M{self.ticker})")
         plt.xlabel('Era(s)')
-        fig.figimage(img, 40, -40, zorder=3, alpha=.1, resize=False)
+        plt.xticks(rotation=45)
+        plt.subplots_adjust(bottom=0.15)
+
+        fig.figimage(img, 0, 10, zorder=3, alpha=.1, resize=False)
+        plt.grid()
         plt.savefig('TotalStake84Eras.png')
+        plt.close()
+
+        tweet_body = (f"There are currently {current_era_stake} (${Numbers(usd_stake_value).human_format()}) ${self.ticker} locked on the network.\n\n"
+                      f"{era_diff_text}")
+        print(tweet_body)
+        self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
+
+

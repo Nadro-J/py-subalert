@@ -107,6 +107,13 @@ class Tweet:
         self.auth = Configuration()
         self.hashtag = self.auth.yaml_file['twitter']['hashtag']
 
+    def tweet_media(self, filename, message):
+        try:
+            self.auth.api.update_with_media(filename, f"{message} #{self.hashtag}")
+            print("🐤 tweet successfully sent!")
+        except Exception as err:
+            print(err)
+
     def alert(self, message):
         try:
             self.auth.api.update_status(f"{message} #{self.hashtag}")
