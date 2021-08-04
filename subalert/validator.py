@@ -99,8 +99,11 @@ class ValidatorWatch:
             elif key == 'values_changed':
                 # format DeepDiff into usable json
                 for obj, attributes in result['values_changed'].items():
-                    address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
-                    validators_list.update({address: attributes})
+                    if 'blocked' in obj:
+                        pass
+                    elif 'commission' in obj:
+                        address = obj.replace("root['", "").replace("']", "").replace("['commission", "")
+                        validators_list.update({address: attributes})
 
                 for validator_address, changed_attributes in validators_list.items():
                     old_value = float(f"{100 * float(changed_attributes['old_value']) / float(1000000000):,.2f}")
@@ -139,5 +142,6 @@ class ValidatorWatch:
                 if self.queue.size() >= 1:
                     for tweet in self.queue.items:
                         self.tweet.alert(tweet)
+                        print(tweet)
                         time.sleep(5)
                     Utils.cache_data('validators-commission.cache', commission_data)
