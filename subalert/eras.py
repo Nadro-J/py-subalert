@@ -21,6 +21,14 @@ class EraAnalysis:
             params=[])
         return result
 
+    def circulating_supply(self):
+        result = self.substrate.query(
+            module='Balances',
+            storage_function='TotalIssuance',
+            params=[]
+        )
+        return Numbers(int(str(result)) / 10 ** self.substrate.token_decimals).large_to_dec()
+
     def era_84_graph(self):
         era_data, eras, values = {}, [], []
 
@@ -38,10 +46,12 @@ class EraAnalysis:
         price = CoinGecko(coin=self.hashtag, currency='usd').price()
         current_era_index = eras[total_eras]
         current_era_stake = Numbers(int(era_data[current_era_index]) / 10 ** self.substrate.token_decimals).human_format()
+        current_era_stake_N = float(Numbers(int(era_data[current_era_index]) / 10 ** self.substrate.token_decimals).large_to_dec())
         previous_era_index = eras[total_eras - 1]
         usd_stake_value = int(era_data[current_era_index]) / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         era_difference = int(era_data[current_era_index]) - int(era_data[previous_era_index])
         usd_era_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
+        percentage_locked = current_era_stake_N / float(self.circulating_supply())
 
         era_diff_text = ""
         if era_difference < 0:
@@ -64,9 +74,9 @@ class EraAnalysis:
         plt.savefig('TotalStake84Eras.png')
         plt.close()
 
-        tweet_body = (f"There are currently {current_era_stake} (${Numbers(usd_stake_value).human_format()}) ${self.ticker} locked on the network.\n\n"
+        tweet_body = (f"There are currently {current_era_stake} (${Numbers(usd_stake_value).human_format()}) {percentage_locked:.2%} ${self.ticker} locked on the network.\n\n"
                       f"{era_diff_text}")
-        print(tweet_body)
+
         self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
 
 
