@@ -84,10 +84,10 @@ class EraAnalysis:
         plt.xticks(rotation=45)
         plt.subplots_adjust(bottom=0.15)
 
-        fig.figimage(img, 0, 10, zorder=3, alpha=.1, resize=False)
+        fig.figimage(img, zorder=3, alpha=.1, resize=False)
         plt.grid()
-        plt.tight_layout()
-        plt.savefig('TotalStake84Eras.png')
+
+        plt.savefig('TotalStake84Eras.png', bbox_inches='tight')
         plt.close()
 
         tweet_body = (
@@ -95,7 +95,6 @@ class EraAnalysis:
             f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
             f"{era_diff_text}")
 
-        print(tweet_body)
-        #self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
+        self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
 
 
