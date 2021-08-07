@@ -34,7 +34,7 @@ class EraAnalysis:
             storage_function='TotalIssuance',
             params=[]
         )
-        return Numbers(int(str(result)) / 10 ** self.token_decimal).large_to_dec()
+        return int(str(result))
 
     def era_84_graph(self):
         """
@@ -64,9 +64,8 @@ class EraAnalysis:
         era_difference = int(era_data[current_index]) - int(era_data[previous_index])
         usd_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         current_stake = Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
-        current_stake_n = float(Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).large_to_dec())
         current_stake_usd = int(era_data[current_index]) / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
-        percentage_locked = current_stake_n / float(self.circulating_supply())
+        percentage_locked = int(era_data[current_index]) / self.circulating_supply()
 
         # Change icon depending if more or less has been bonded.
         if era_difference < 0:
@@ -87,6 +86,7 @@ class EraAnalysis:
 
         fig.figimage(img, 0, 10, zorder=3, alpha=.1, resize=False)
         plt.grid()
+        plt.tight_layout()
         plt.savefig('TotalStake84Eras.png')
         plt.close()
 
@@ -95,6 +95,7 @@ class EraAnalysis:
             f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
             f"{era_diff_text}")
 
-        self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
+        print(tweet_body)
+        #self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
 
 
