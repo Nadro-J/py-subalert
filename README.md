@@ -69,24 +69,29 @@ era = EraAnalysis()
 era.era_84_graph()
 ```
 
+##### Monitor incoming/closing tips
+```python
+from subalert.tips import *
+
+tips = TipsSubscription()
+tips.has_tips_updated()
+```
+
 ---
 
 ### Roadmap  
 - Large balance transfers ✅  
-![](https://i.imgur.com/UK79bb8.png)
+    - include matplotlib graph detailing sender/receiver balance history over 7 days. 🔄
 - Governance  
     - Referenda ✅   
-    ![](https://i.imgur.com/7wdmhyg.png)
     - Council
     - Proposals 
-    - Tips 🔄
+    - Tips ✅
     - Bounties
 - Staking
-    - Total stake per era (report the difference from the previous era)
+    - Total stake per era (report the difference from the previous era) ✅
     - Monitor changes to Validator commission ✅  
-    ![](https://i.imgur.com/JY67kkv.png)
 - Polkadot Binary Updates ✅  
-![](https://i.imgur.com/lOVP4D5.png)
 
 
 
