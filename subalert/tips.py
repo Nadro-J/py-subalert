@@ -68,13 +68,6 @@ class TipsSubscription:
                         for tip in cached_tips_data[tip_hash]['tips']:
                             tip_values.append(tip['balance'])
 
-                        print(f"-- [Tip closing] -----\n"
-                              f"hash: {tip_hash}\n"
-                              f"closing at: {close_height}\n"
-                              f"reason: {reason}\n"
-                              f"tip: {statistics.median(tip_values) / 10 ** self.substrate.token_decimals}\n"
-                              f"----------------------\n")
-
                         tweet_body = (
                             f"💰Tip closed for {statistics.median(tip_values) / 10 ** self.substrate.token_decimals} {self.ticker}\n\n"
                             f"{reason}\n\n"
@@ -84,7 +77,6 @@ class TipsSubscription:
 
             if key == 'dictionary_item_added':
                 for tip_hash in result[key]:
-
                     tip_hash = tip_hash.replace("root['", "").replace("']", "")
                     reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
 
