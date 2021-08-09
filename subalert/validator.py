@@ -12,8 +12,13 @@ class ValidatorWatch:
         self.utils = Utils()
         self.substrate = self.config.substrate
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
+        self.commission_change = self.config.yaml_file['alert']['validator_change']
 
     def check_super_of(self, address):
+        """
+        :param address:
+        :return: The super-identity of an alternative 'sub' identity together with its name, within that
+        """
         result = self.substrate.query(
             module='Identity',
             storage_function='SuperOf',
@@ -25,6 +30,10 @@ class ValidatorWatch:
             return 0
 
     def check_identity(self, address):
+        """
+        :param address:
+        :return: Information that is pertinent to identify the entity behind an account.
+        """
         result = self.substrate.query_map(
             module='Identity',
             storage_function='IdentityOf')
@@ -48,6 +57,9 @@ class ValidatorWatch:
                 return identification
 
     def get_current_commission(self):
+        """
+        :return: All validators & attributes returned as a list.
+        """
         validators_list = {}
         result = self.substrate.query_map(
             module='Staking',
@@ -61,21 +73,23 @@ class ValidatorWatch:
         return validators_list
 
     def has_commission_updated(self):
+        """
+        This function uses DeepDiff to determine what type of data has changed.
+        :return: check if a validator has updated there commission since you last checked.
+        """
         commission_data = self.get_current_commission()
         _1kv_candidates = self.utils.get_1kv_candidates()
         value_difference = float()
         validators_list = {}
         change = ""
 
-        # create if it doest exist
-        if not os.path.isfile('validators-commission.cache'):
-            Utils.cache_data('validators-commission.cache', commission_data)
+        if not os.path.isfile('data-cache/validators-commission.cache'):
+            Utils.cache_data('data-cache/validators-commission.cache', commission_data)
 
-        cached_commission_data = Utils.open_cache('validators-commission.cache')
+        cached_commission_data = Utils.open_cache('data-cache/validators-commission.cache')
 
-        # use DeepDiff to check if any values have changed since we last checked.
+        # use DeepDiff to check if any values have changed since we ran has_commission_updated().
         difference = DeepDiff(cached_commission_data, commission_data, ignore_order=True).to_json()
-
         result = json.loads(difference)
 
         if len(result) == 0:
@@ -84,7 +98,6 @@ class ValidatorWatch:
 
         print("🔧 changes have been found since the last time has_commission_updated was invoked")
 
-        # need to sort out what happens when a new validator is found,.5T
         for key, value in result.items():
             if key == 'dictionary_item_added':
                 for new_address in value:
@@ -129,7 +142,7 @@ class ValidatorWatch:
                         stamp_1kv = '#1KV'
 
                     # only tweet when the commission has been changed > 3%.
-                    if value_difference > 3:
+                    if value_difference > self.commission_change:
                         tweet_body = (
                             f"🕵️{validator_address} {stamp_1kv} has updated their commission from {old_value:,.2f}% to {new_value:,.2f}%.\n\n"
                             f"{change}\n\n"
@@ -137,11 +150,10 @@ class ValidatorWatch:
 
                         self.queue.enqueue(tweet_body)
 
-                # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
-                # requests.
-                if self.queue.size() >= 1:
-                    for tweet in self.queue.items:
-                        self.tweet.alert(tweet)
-                        print(tweet)
-                        time.sleep(5)
-                    Utils.cache_data('validators-commission.cache', commission_data)
+            # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
+            # requests.
+            if self.queue.size() >= 1:
+                for tweet in self.queue.items:
+                    self.tweet.alert(tweet)
+                    time.sleep(5)
+            Utils.cache_data('data-cache/validators-commission.cache', commission_data)
