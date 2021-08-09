@@ -14,6 +14,7 @@ class EraAnalysis:
         self.token_decimal = self.substrate.token_decimals
         self.hashtag = self.config.yaml_file['twitter']['hashtag']
         self.ticker = self.config.yaml_file['chain']['ticker']
+        self.eras_per_day = self.config.yaml_file['chain']['eras']
 
     def era_total_stake(self):
         """
@@ -60,7 +61,7 @@ class EraAnalysis:
         era_diff_text = ""
         total_eras = len(eras) - 1
         current_index = eras[total_eras]
-        previous_index = eras[total_eras - 1]
+        previous_index = eras[total_eras - self.eras_per_day]
         era_difference = int(era_data[current_index]) - int(era_data[previous_index])
         usd_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         current_stake = Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
@@ -83,10 +84,8 @@ class EraAnalysis:
         plt.xlabel('Era(s)')
         plt.xticks(rotation=45)
         plt.subplots_adjust(bottom=0.15)
-
         fig.figimage(img, zorder=3, alpha=.1, resize=False)
         plt.grid()
-
         plt.savefig('TotalStake84Eras.png', bbox_inches='tight')
         plt.close()
 
@@ -96,5 +95,4 @@ class EraAnalysis:
             f"{era_diff_text}")
 
         self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
-
 
