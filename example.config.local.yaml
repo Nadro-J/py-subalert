@@ -1,0 +1,21 @@
+twitter:
+  hashtag: Kusama
+  OAuthHandler:
+    consumer_key:
+    consumer_secret:
+  access_token:
+    key:
+    secret:
+chain:
+  url: wss://kusama-rpc.polkadot.io/
+  ss58_format: 2
+  type_registry_preset: kusama
+  ticker: KSM
+  eras: 4
+alert:
+  transact_threshold: 1000
+  whale_threshold: 250000
+  validator_change: 10
+github:
+  repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
+validator_programme_url: https://kusama.w3f.community/candidates
