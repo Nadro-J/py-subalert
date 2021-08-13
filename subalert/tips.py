@@ -58,34 +58,39 @@ class TipsSubscription:
 
         for key, value in result.items():
             # type_change ['closes'] goes from null to an integer value (block height) of when the tip will be closed.
-            tip_values = []
             if key == 'type_changes':
                 for tip_hash, attributes in result[key].items():
                     if 'closes' in tip_hash:
                         tip_hash = tip_hash.replace("root['", "").replace("']", "").replace("['closes", "")
                         reason = self.tip_reason(cached_tips_data[tip_hash]['reason'])
                         close_height = attributes['new_value']
-                        for tip in cached_tips_data[tip_hash]['tips']:
+                        tip_values = []
+                        for tip in tips_data[tip_hash]['tips']:
                             tip_values.append(tip['balance'])
 
-                        tweet_body = (
-                            f"💰Tip closed for {statistics.median(tip_values) / 10 ** self.substrate.token_decimals} {self.ticker}\n\n"
-                            f"{reason}\n\n"
-                            f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
-                        )
-                        self.queue.enqueue(tweet_body)
+                        median = statistics.median(tip_values) / 10 ** self.substrate.token_decimals
+
+                        if median <= 0.0:
+                            pass
+                        else:
+                            tweet_body = (
+                                f"💰Tip closed for {median} {self.ticker}\n\n"
+                                f"{reason}\n\n"
+                                f"payout scheduled on block {close_height}\n\n"
+                                f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
+                            )
+                            self.queue.enqueue(tweet_body)
 
             if key == 'dictionary_item_added':
-                for tip_hash in result[key]:
-                    tip_hash = tip_hash.replace("root['", "").replace("']", "")
-                    reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
+                tip_hash = tip_hash.replace("root['", "").replace("']", "")
+                reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
 
-                    tweet_body = (
-                        f"🖐️A new tip has been proposed.\n\n"
-                        f"{reason}\n\n"
-                        f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
-                    )
-                    self.queue.enqueue(tweet_body)
+                tweet_body = (
+                    f"🖐️A new tip has been proposed.\n\n"
+                    f"{reason}\n\n"
+                    f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
+                )
+                self.queue.enqueue(tweet_body)
 
         # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
         # requests.
@@ -93,3 +98,5 @@ class TipsSubscription:
             for tweet in self.queue.items:
                 self.tweet.alert(tweet)
                 time.sleep(5)
+
+        Utils.cache_data('data-cache/tips.cache', tips_data)
