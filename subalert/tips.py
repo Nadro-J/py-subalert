@@ -76,7 +76,7 @@ class TipsSubscription:
                             tweet_body = (
                                 f"💰Tip closed for {median} {self.ticker}\n\n"
                                 f"{reason}\n\n"
-                                f"payout scheduled on block {close_height}\n\n"
+                                f"payout scheduled on block {close_height:,.2f}\n\n"
                                 f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
                             )
                             self.queue.enqueue(tweet_body)
