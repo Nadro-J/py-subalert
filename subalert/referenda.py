@@ -1,27 +1,16 @@
-from subalert.base import Tweet  # local library
-from subalert.base import Configuration  # local library
+import subalert.base
 
 
 class DemocracySubscription:
     def __init__(self):
-        self.tweet = Tweet()
-        self.config = Configuration()
+        self.tweet = subalert.base.Tweet()
+        self.config = subalert.base.Configuration()
         self.substrate = self.config.substrate
 
     def referendum_info(self, index):
         """
         :param index: index of referendum
-        :return: data: {'Ongoing': {
-                            'end': 6048000,
-                            'proposalHash': '0x397985b75154982117611d75751dd4453877fd65e714c54d251f5e771351e07d',
-                            'threshold': 'Super majority approval', #
-                            'delay': 403200,
-                            'tally': {
-                                'ayes': 100942195000000,
-                                'nays': 1502819115000000,
-                                'turnout': 2388275096100000
-                            }
-                       }}
+        :return: Information regarding a specific referendum
         """
 
         # index - 1 since democracy referendum starts at zero
@@ -78,4 +67,3 @@ class DemocracySubscription:
             module='Democracy',
             storage_function='ReferendumCount',
             subscription_handler=self.new_referendum)))
-

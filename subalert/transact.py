@@ -1,11 +1,11 @@
 import json
-from subalert.base import Tweet, Configuration, CoinGecko, Numbers  # local library
-from substrateinterface import SubstrateInterface, ExtrinsicReceipt
+import subalert.base
+from substrateinterface import ExtrinsicReceipt
 
 class TransactionSubscription:
     def __init__(self):
-        self.tweet = Tweet()
-        self.config = Configuration()
+        self.tweet = subalert.base.Tweet()
+        self.config = subalert.base.Configuration()
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
@@ -15,14 +15,7 @@ class TransactionSubscription:
     def system_account(self, address):
         """
         :param address: On-chain address to lookup.
-        :return: {'nonce': 24799, 'consumers': 0, 'providers': 1, 'sufficients': 0,
-                    'data': {
-                        'free': 14574104215557330,
-                        'reserved': 0,
-                        'miscFrozen': 0,
-                        'feeFrozen': 0
-                    }
-                  }
+        :return: Information regarding a specific address on the network
         """
         result = self.substrate.query(
             module='System',
@@ -81,7 +74,7 @@ class TransactionSubscription:
                 destination = data[signed_by_address]['dest']
                 amount = float(data[signed_by_address]['value'])
 
-                price = CoinGecko(coin=self.hashtag, currency='usd').price()
+                price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
                 usd_amount = amount * float(price.replace('$', ''))
 
                 # ignore transactions if destination = signed_by_address
@@ -110,11 +103,11 @@ class TransactionSubscription:
                     usd_destination_locked = destination_locked * float(price.replace('$', ''))
 
 
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({price} - ${Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
-                                  f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
-                                  f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
-                                  f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
-                                  f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
+                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
+                                  f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                                  f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
+                                  f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                                  f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
                                   f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     self.tweet.alert(tweet_body)

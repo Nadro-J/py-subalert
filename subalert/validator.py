@@ -1,15 +1,18 @@
-from subalert.base import Tweet  # local library
-from subalert.base import Configuration, Utils, Queue  # local library
-from deepdiff import DeepDiff
-import json, os, time
+import json
+import os
+import time
+
+import deepdiff
+
+import subalert.base
 
 
 class ValidatorWatch:
     def __init__(self):
-        self.tweet = Tweet()
-        self.config = Configuration()
-        self.queue = Queue()
-        self.utils = Utils()
+        self.tweet = subalert.base.Tweet()
+        self.config = subalert.base.Configuration()
+        self.queue = subalert.base.Queue()
+        self.utils = subalert.base.Utils()
         self.substrate = self.config.substrate
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
         self.commission_change = self.config.yaml_file['alert']['validator_change']
@@ -84,12 +87,12 @@ class ValidatorWatch:
         change = ""
 
         if not os.path.isfile('data-cache/validators-commission.cache'):
-            Utils.cache_data('data-cache/validators-commission.cache', commission_data)
+            subalert.base.Utils.cache_data('data-cache/validators-commission.cache', commission_data)
 
-        cached_commission_data = Utils.open_cache('data-cache/validators-commission.cache')
+        cached_commission_data = subalert.base.Utils.open_cache('data-cache/validators-commission.cache')
 
         # use DeepDiff to check if any values have changed since we ran has_commission_updated().
-        difference = DeepDiff(cached_commission_data, commission_data, ignore_order=True).to_json()
+        difference = deepdiff.DeepDiff(cached_commission_data, commission_data, ignore_order=True).to_json()
         result = json.loads(difference)
 
         if len(result) == 0:
@@ -156,4 +159,4 @@ class ValidatorWatch:
                 for tweet in self.queue.items:
                     self.tweet.alert(tweet)
                     time.sleep(5)
-            Utils.cache_data('data-cache/validators-commission.cache', commission_data)
+            subalert.base.Utils.cache_data('data-cache/validators-commission.cache', commission_data)
