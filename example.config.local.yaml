@@ -13,7 +13,7 @@ chain:
   ticker: KSM
   eras: 4
 alert:
-  transact_threshold: 1000
+  transact_usd_threshold: 200000
   whale_threshold: 250000
   validator_change: 10
 github:
