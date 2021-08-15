@@ -1,19 +1,27 @@
-from subalert.base import Tweet  # local library
-from subalert.base import Configuration, Utils, Queue  # local library
-from deepdiff import DeepDiff
-import json, os, time, statistics
+import json
+import os
+import statistics
+import time
+
+import deepdiff
+
+import subalert.base
+
 
 class TipsSubscription:
     def __init__(self):
-        self.tweet = Tweet()
-        self.config = Configuration()
-        self.utils = Utils()
-        self.queue = Queue()
+        self.tweet = subalert.base.Tweet()
+        self.config = subalert.base.Configuration()
+        self.utils = subalert.base.Utils()
+        self.queue = subalert.base.Queue()
         self.substrate = self.config.substrate
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
 
     def tips_info(self):
+        """
+        :return: A list of all proposed tips
+        """
         tips_list = {}
         result = self.substrate.query_map(
             module='Tips',
@@ -26,6 +34,10 @@ class TipsSubscription:
         return tips_list
 
     def tip_info(self, tip_hash):
+        """
+        :param tip_hash:
+        :return: Details of a specific proposed tip.
+        """
         result = self.substrate.query(
             module='Tips',
             storage_function='Tips',
@@ -34,6 +46,10 @@ class TipsSubscription:
         return result.serialize()
 
     def tip_reason(self, reason_hash):
+        """
+        :param reason_hash:
+        :return: Short description on why the tip was proposed.
+        """
         result = self.substrate.query(
             module='Tips',
             storage_function='Reasons',
@@ -42,14 +58,17 @@ class TipsSubscription:
         return result
 
     def has_tips_updated(self):
+        """
+        :return: check if tips data has updated since you last checked.
+        """
         tips_data = self.tips_info()
 
         if not os.path.isfile('data-cache/tips.cache'):
-            Utils.cache_data('data-cache/tips.cache', tips_data)
+            subalert.base.Utils.cache_data('data-cache/tips.cache', tips_data)
 
-        cached_tips_data = Utils.open_cache('data-cache/tips.cache')
+        cached_tips_data = subalert.base.Utils.open_cache('data-cache/tips.cache')
 
-        difference = DeepDiff(cached_tips_data, tips_data, ignore_order=True).to_json()
+        difference = deepdiff.DeepDiff(cached_tips_data, tips_data, ignore_order=True).to_json()
         result = json.loads(difference)
 
         if len(result) == 0:
@@ -76,7 +95,7 @@ class TipsSubscription:
                             tweet_body = (
                                 f"💰Tip closed for {median} {self.ticker}\n\n"
                                 f"{reason}\n\n"
-                                f"payout scheduled on block {close_height:,.2f}\n\n"
+                                f"payout scheduled on block {close_height:,}\n\n"
                                 f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
                             )
                             self.queue.enqueue(tweet_body)
@@ -99,4 +118,4 @@ class TipsSubscription:
                 self.tweet.alert(tweet)
                 time.sleep(5)
 
-        Utils.cache_data('data-cache/tips.cache', tips_data)
+        subalert.base.Utils.cache_data('data-cache/tips.cache', tips_data)
