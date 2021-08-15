@@ -2,6 +2,7 @@ import json
 import subalert.base
 from substrateinterface import ExtrinsicReceipt
 
+
 class TransactionSubscription:
     def __init__(self):
         self.tweet = subalert.base.Tweet()
@@ -102,13 +103,13 @@ class TransactionSubscription:
                     usd_destination_balance = destination_balance * float(price.replace('$', ''))
                     usd_destination_locked = destination_locked * float(price.replace('$', ''))
 
-
-                    tweet_body = (f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
-                                  f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
-                                  f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
-                                  f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
-                                  f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
-                                  f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
+                    tweet_body = (
+                        f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
+                        f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                        f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
+                        f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                        f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
+                        f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     self.tweet.alert(tweet_body)
 
