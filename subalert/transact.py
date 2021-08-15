@@ -6,7 +6,7 @@ class TransactionSubscription:
     def __init__(self):
         self.tweet = Tweet()
         self.config = Configuration()
-        self.threshold = self.config.yaml_file['alert']['transact_threshold']
+        self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.substrate = self.config.substrate
@@ -81,9 +81,11 @@ class TransactionSubscription:
                 destination = data[signed_by_address]['dest']
                 amount = float(data[signed_by_address]['value'])
 
+                price = CoinGecko(coin=self.hashtag, currency='usd').price()
+                usd_amount = amount * float(price.replace('$', ''))
+
                 # ignore transactions if destination = signed_by_address
-                if amount > threshold and destination != signed_by_address:
-                    price = CoinGecko(coin=self.hashtag, currency='usd').price()
+                if usd_amount > threshold and destination != signed_by_address:
 
                     # Sender
                     sender_account = self.system_account(signed_by_address)['data']
@@ -106,7 +108,7 @@ class TransactionSubscription:
 
                     usd_destination_balance = destination_balance * float(price.replace('$', ''))
                     usd_destination_locked = destination_locked * float(price.replace('$', ''))
-                    usd_amount = amount * float(price.replace('$', ''))
+
 
                     tweet_body = (f"{amount:,.2f} ${self.ticker} ({price} - ${Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
                                   f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
