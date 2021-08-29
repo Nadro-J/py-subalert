@@ -6,6 +6,7 @@ class DemocracySubscription:
         self.tweet = subalert.base.Tweet()
         self.config = subalert.base.Configuration()
         self.substrate = self.config.substrate
+        self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
 
     def referendum_info(self, index):
         """
@@ -50,7 +51,7 @@ class DemocracySubscription:
                               f"end: {end} - delay: {delay}\n"
                               f"threshold: {threshold}\n"
                               f"✅AYE: {ayes / 10 ** self.substrate.token_decimals:,.2f} - ❌NAY: {nays / 10 ** self.substrate.token_decimals:,.2f}\n\n"
-                              f"https://polkadot.polkassembly.io/referendum/{obj.value - 1}")
+                              f"https://{self.hashtag.lower()}.polkassembly.io/referendum/{obj.value - 1}")
 
                 self.tweet.alert(tweet_body)
 
