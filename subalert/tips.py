@@ -77,7 +77,19 @@ class TipsSubscription:
 
         for key, value in result.items():
             # type_change ['closes'] goes from null to an integer value (block height) of when the tip will be closed.
-            if key == 'type_changes':
+            if key == 'dictionary_item_added':
+                for tip_hash in value:
+                    tip_hash = tip_hash.replace("root['", "").replace("']", "")
+                    reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
+
+                    tweet_body = (
+                        f"🖐️A new tip has been proposed.\n\n"
+                        f"{reason}\n\n"
+                        f"https://www.dotreasury.com/{self.ticker}/tips/{tip_hash}"
+                    )
+                    self.queue.enqueue(tweet_body)
+
+            elif key == 'type_changes':
                 for tip_hash, attributes in result[key].items():
                     if 'closes' in tip_hash:
                         tip_hash = tip_hash.replace("root['", "").replace("']", "").replace("['closes", "")
@@ -96,26 +108,17 @@ class TipsSubscription:
                                 f"💰Tip closed for {median} {self.ticker}\n\n"
                                 f"{reason}\n\n"
                                 f"payout scheduled on block {close_height:,}\n\n"
-                                f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
+                                f"https://www.dotreasury.com/{self.ticker}/tips/{tip_hash}"
                             )
                             self.queue.enqueue(tweet_body)
-
-            if key == 'dictionary_item_added':
-                tip_hash = tip_hash.replace("root['", "").replace("']", "")
-                reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
-
-                tweet_body = (
-                    f"🖐️A new tip has been proposed.\n\n"
-                    f"{reason}\n\n"
-                    f"https://{self.hashtag.lower()}.polkassembly.io/tip/{tip_hash}"
-                )
-                self.queue.enqueue(tweet_body)
 
         # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
         # requests.
         if self.queue.size() >= 1:
             for tweet in self.queue.items:
+                print(tweet)
                 self.tweet.alert(tweet)
+                print("---")
                 time.sleep(5)
 
         subalert.base.Utils.cache_data('data-cache/tips.cache', tips_data)
