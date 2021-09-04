@@ -1,17 +1,18 @@
 #!/bin/bash
 # ----------------------------------------------------------
-# Frequency 						            | Name
+# Frequency                         | Name
 # ----------------------------------------------------------
 # At minute 0 past every 12th hour. | validator monitoring
 # At 17:00 every day.               | Era graph
 # Every hour                        | Tip monitoring
-# Every hour						            | Latest repository release
+# Every hour                        | Latest repository release
 # ----------------------------------------------------------
 user=$(whoami)
 
 echo "[+] Attempting to create PM2 application(s)"
 pm2 start tx-alert.py --name transactions --interpreter=python3
 pm2 start referenda-alert.py --name referenda --interpreter=python3
+pm2 save
 
 echo "[+] Creating cronjobs if they haven't been created already"
 (crontab -l; echo "0 */12 * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/commission.py >> /$user/py-subalert/logs/validator_commission.log 2>&1") | sort -u | crontab -
