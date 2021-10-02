@@ -1,8 +1,12 @@
-import yaml
-import tweepy
-from substrateinterface import SubstrateInterface
+import json
+import uuid, random
+import urllib.request
 from urllib.request import urlopen
-import urllib.request, json, os
+
+import tweepy
+import yaml
+from PIL import Image, ImageDraw, ImageFont
+from substrateinterface import SubstrateInterface
 
 
 class Configuration:
@@ -22,6 +26,101 @@ class Configuration:
 
         # Create API object
         self.api = tweepy.API(self.auth)
+
+
+config = Configuration()
+hashtag = config.yaml_file['twitter']['hashtag']
+substrate = config.substrate
+
+
+class SubQuery:
+    @staticmethod
+    def check_super_of(address):
+        """
+        :param address:
+        :return: The super-identity of an alternative 'sub' identity together with its name, within that
+        """
+        result = substrate.query(
+            module='Identity',
+            storage_function='SuperOf',
+            params=[address])
+
+        if result.value is not None:
+            return result.value[0]
+        else:
+            return 0
+
+    def check_identity(self, address):
+        """
+        :param address:
+        :return: Information that is pertinent to identify the entity behind an account.
+        """
+        identification = ''
+        result = substrate.query_map(
+            module='Identity',
+            storage_function='IdentityOf')
+
+        super_of = self.check_super_of(address)
+        if super_of:
+            address = super_of
+
+        for identity_address, information in result:
+            # print(f">>> {identity_address.value}")
+            if address == identity_address.value:
+                for identity_type, values in information.value['info'].items():
+                    if 'display' in identity_type or 'twitter' in identity_type:
+                        for value_type, value in values.items():
+                            if identity_type == 'display' and value_type == 'Raw':
+                                identification += f"🆔 {value} "
+
+                            if identity_type == 'twitter' and value_type == 'Raw':
+                                identification += f"🐦 {value}"
+
+        # Return address if no identity has been setup
+        if identification == '':
+            return address
+        else:
+            return identification
+
+
+class Imagify:
+    def __init__(self, title, text):
+        self.title = title
+        self.text = text
+
+    def create(self):
+        watermark = Image.open(f'logos/{hashtag}_White.png')
+        new_watermark = watermark.resize((75, 75), Image.ANTIALIAS)
+        guid = uuid.uuid4()
+        imagify_path = f"logos/Imagify/{guid}.png"
+
+        # background
+        new_image = Image.new('RGBA', (400, 300), color='#36393f')
+        new_image_draw = ImageDraw.Draw(new_image)
+
+        # text font settings
+        text_font = ImageFont.truetype(font="fonts/SourceCodePro-Regular.ttf", size=16)
+        text_w, text_h = new_image_draw.textsize(self.text, text_font)
+
+        # title font settings
+        title_font = ImageFont.truetype(font="fonts/SourceCodePro-Bold.ttf", size=22)
+        title_w, title_h = new_image_draw.textsize(self.title, title_font)
+
+        # resize if title_width is larger than text_width
+        if title_w > text_w:
+            modified_image = new_image.resize(size=(title_w + 25, text_h + 50))
+            modified_image_draw = ImageDraw.Draw(modified_image)
+        else:
+            modified_image = new_image.resize(size=(text_w + 25, text_h + 50))
+            modified_image_draw = ImageDraw.Draw(modified_image)
+
+        modified_image.paste(new_watermark, (0, 0), mask=new_watermark)
+        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title,
+                                 fill='#d1d0b0', font=title_font)
+        modified_image_draw.text(xy=(10, 50), text=self.text,
+                                 fill='#d1d0b0', font=text_font)
+        modified_image.save(imagify_path)
+        return imagify_path
 
 
 class Numbers:
@@ -63,9 +162,6 @@ class Queue:
 
 
 class Utils:
-    def __init__(self):
-        self.auth = Configuration()
-
     @staticmethod
     def cache_data(filename, data):
         with open(f"{filename}", 'w') as cache:
@@ -79,10 +175,11 @@ class Utils:
             cache.close()
         return cached_file
 
-    def get_1kv_candidates(self):
+    @staticmethod
+    def get_1kv_candidates():
         candidates = []
         header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'}
-        request = urllib.request.Request(self.auth.yaml_file['validator_programme_url'], headers=header)
+        request = urllib.request.Request(config.yaml_file['validator_programme_url'], headers=header)
         response = json.loads(urlopen(request).read())
 
         for candidate in response:
@@ -103,20 +200,18 @@ class CoinGecko:
 
 
 class Tweet:
-    def __init__(self):
-        self.auth = Configuration()
-        self.hashtag = self.auth.yaml_file['twitter']['hashtag']
-
-    def tweet_media(self, filename, message):
+    @staticmethod
+    def tweet_media(filename, message):
         try:
-            self.auth.api.update_with_media(filename, f"{message} #{self.hashtag}")
+            config.api.update_with_media(filename, f"{message} #{hashtag}")
             print("🐤 tweet successfully sent!")
         except Exception as err:
             print(err)
 
-    def alert(self, message):
+    @staticmethod
+    def alert(message):
         try:
-            self.auth.api.update_status(f"{message} #{self.hashtag}")
+            config.api.update_status(f"{message} #{hashtag}")
             print("🐤 tweet successfully sent!")
         except tweepy.error.TweepError as error:
             if error == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
@@ -127,12 +222,9 @@ class Tweet:
 
 
 class GitWatch:
-    def __init__(self):
-        self.config = Configuration()
-        self.url = self.config.yaml_file['github']['repository']
-
-    def latest_release(self):
-        with urllib.request.urlopen(self.url) as repository:
+    @staticmethod
+    def latest_release():
+        with urllib.request.urlopen(config.yaml_file['github']['repository']) as repository:
             data = json.loads(repository.read().decode())
             return data
 
