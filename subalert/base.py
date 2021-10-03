@@ -71,10 +71,10 @@ class SubQuery:
                     if 'display' in identity_type or 'twitter' in identity_type:
                         for value_type, value in values.items():
                             if identity_type == 'display' and value_type == 'Raw':
-                                identification += f"🆔 {value} "
+                                identification += f"{value} "
 
                             if identity_type == 'twitter' and value_type == 'Raw':
-                                identification += f"🐦 {value}"
+                                identification += f"/ {value}"
 
         # Return address if no identity has been setup
         if identification == '':
@@ -84,9 +84,9 @@ class SubQuery:
 
 
 class Imagify:
-    def __init__(self, title, text):
+    def __init__(self, title, text: str):
         self.title = title
-        self.text = text
+        self.text = text.encode("ascii", errors="ignore").decode()
 
     def create(self):
         watermark = Image.open(f'logos/{hashtag}_White.png')
@@ -108,16 +108,16 @@ class Imagify:
 
         # resize if title_width is larger than text_width
         if title_w > text_w:
-            modified_image = new_image.resize(size=(title_w + 25, text_h + 50))
+            modified_image = new_image.resize(size=(title_w + 75, text_h + 75))
             modified_image_draw = ImageDraw.Draw(modified_image)
         else:
-            modified_image = new_image.resize(size=(text_w + 25, text_h + 50))
+            modified_image = new_image.resize(size=(text_w + 75, text_h + 75))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        modified_image.paste(new_watermark, (0, 0), mask=new_watermark)
+        modified_image.paste(new_watermark, (modified_image.width - 75, text_h), mask=new_watermark)
         modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title,
                                  fill='#d1d0b0', font=title_font)
-        modified_image_draw.text(xy=(10, 50), text=self.text,
+        modified_image_draw.text(xy=(10, 75), text=self.text,
                                  fill='#d1d0b0', font=text_font)
         modified_image.save(imagify_path)
         return imagify_path
