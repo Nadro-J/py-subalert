@@ -1,12 +1,14 @@
 import json
 import subalert.base
+from subalert.base import Numbers, Tweet, Configuration, SubQuery
 from substrateinterface import ExtrinsicReceipt
 
 
 class TransactionSubscription:
     def __init__(self):
-        self.tweet = subalert.base.Tweet()
-        self.config = subalert.base.Configuration()
+        self.tweet = Tweet()
+        self.config = Configuration()
+        self.subquery = SubQuery()
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
@@ -39,6 +41,16 @@ class TransactionSubscription:
             if extrinsic["call"]["call_function"].name != "transfer":
                 continue
 
+            extrinsic_hash = extrinsic.value['extrinsic_hash']
+            receipt = ExtrinsicReceipt(
+                substrate=self.substrate,
+                extrinsic_hash=extrinsic_hash,
+                block_hash=block_hash)
+
+            if not receipt.is_success:
+                print("[!] Extrinsic failed, skipping")
+                continue
+
             if 'address' in extrinsic:
                 signed_by_address = extrinsic['address'].value
             else:
@@ -56,28 +68,16 @@ class TransactionSubscription:
                 value = param['value'].value
 
                 if 'Balance' in param['typeName'].value:
-                    extrinsic_hash = extrinsic.value['extrinsic_hash']
                     if isinstance(value, int):
                         value = '{}'.format(value / 10 ** self.substrate.token_decimals)
                     else:
                         value = '{}'.format(value)
 
-
-                    receipt = ExtrinsicReceipt(
-                        substrate=self.substrate,
-                        extrinsic_hash=extrinsic_hash,
-                        block_hash=block_hash)
-                    #  [ unsupported operand type(s) error ]
-                    #  self.__total_fee_amount += event.value['attributes']
-                    #  TypeError: unsupported operand type(s) for +=: 'int' and 'tuple'
-                    # print(receipt.is_success)
-
-                    print(f"-- Extrinsic ] ---\n"
+                    print(f"-- Extrinsic: Debugging ] ---\n"
                           f"Extrinsic_hash: {extrinsic_hash}\n"
-                          f"Name: {name}\n"
-                          f"Value: {value}\n"
+                          f"Function call: {extrinsic['call']['call_function'].name}\n"
                           f"Type: {param['typeName']}\n"
-                          f"------------------\n")
+                          f"------------------")
 
                 data[signed_by_address].update({name: value})
 
@@ -85,7 +85,7 @@ class TransactionSubscription:
             amount = float(data[signed_by_address]['value'])
 
             price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
-            usd_amount = amount * float(price.replace('$', ''))
+            usd_amount = amount * float(price)
 
             # ignore transactions if destination = signed_by_address
             if usd_amount > threshold and destination != signed_by_address:
@@ -113,12 +113,16 @@ class TransactionSubscription:
                 usd_destination_locked = destination_locked * float(price.replace('$', ''))
 
                 tweet_body = (
-                    f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
-                    f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
-                    f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
-                    f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
-                    f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
+                    f"{amount:,.2f} ${self.ticker} ({price} - ${Numbers(usd_amount).human_format()}) successfully sent to {self.subquery.short_address(destination)}\n\n"
+                    f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                    f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
+                    f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                    f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
                     f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
+
+                print(f"-- Tweet: Debugging ] ---\n"
+                      f"{tweet_body}\n"
+                      f"-------------------------\n")
                 self.tweet.alert(tweet_body)
 
     def new_block(self, obj, update_nr, subscription_id):
