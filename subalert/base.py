@@ -5,7 +5,7 @@ from urllib.request import urlopen
 
 import tweepy
 import yaml
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from substrateinterface import SubstrateInterface
 
 
@@ -35,6 +35,11 @@ substrate = config.substrate
 
 class SubQuery:
     @staticmethod
+    def short_address(address):
+        start, end = address[:6], address[-6:]
+        return f"{start}...{end}"
+
+    @staticmethod
     def check_super_of(address):
         """
         :param address:
@@ -50,7 +55,7 @@ class SubQuery:
         else:
             return 0
 
-    def check_identity(self, address):
+    def check_identity(self, address, include_twitter: bool=False):
         """
         :param address:
         :return: Information that is pertinent to identify the entity behind an account.
@@ -71,22 +76,24 @@ class SubQuery:
                     if 'display' in identity_type or 'twitter' in identity_type:
                         for value_type, value in values.items():
                             if identity_type == 'display' and value_type == 'Raw':
-                                identification += f"{value} "
+                                identification += f"{value}"
 
-                            if identity_type == 'twitter' and value_type == 'Raw':
-                                identification += f"/ {value}"
+                            if include_twitter:
+                                if identity_type == 'twitter' and value_type == 'Raw':
+                                    identification += f" / {value}"
 
         # Return address if no identity has been setup
         if identification == '':
-            return address
+            return self.short_address(address)
         else:
             return identification
 
 
 class Imagify:
-    def __init__(self, title, text: str):
+    def __init__(self, title, text: str, footer: str):
         self.title = title
         self.text = text.encode("ascii", errors="ignore").decode()
+        self.footer = footer
 
     def create(self):
         watermark = Image.open(f'logos/{hashtag}_White.png')
@@ -106,20 +113,43 @@ class Imagify:
         title_font = ImageFont.truetype(font="fonts/SourceCodePro-Bold.ttf", size=22)
         title_w, title_h = new_image_draw.textsize(self.title, title_font)
 
+        # footer font settings
+        footer_font = ImageFont.truetype(font="fonts/SourceCodePro-Bold.ttf", size=12)
+        footer_w, footer_h = new_image_draw.textsize(self.footer, title_font)
+
         # resize if title_width is larger than text_width
-        if title_w > text_w:
-            modified_image = new_image.resize(size=(title_w + 75, text_h + 75))
-            modified_image_draw = ImageDraw.Draw(modified_image)
-        else:
-            modified_image = new_image.resize(size=(text_w + 75, text_h + 75))
+        # title_W > text_w and footer_w
+        print(self.title)
+
+        if title_w > footer_w:
+            print("title-width is > than footer-width")
+            modified_image = new_image.resize(size=(title_w + 25, text_h + 85))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
+        # If the footer is the biggest element by width, adjust the box.
+        # footer_w > text_w and title_w
+        if footer_w > text_w:
+            print("footer-width is > than title-width")
+            modified_image = new_image.resize(size=(footer_w, text_h + 85))
+            modified_image_draw = ImageDraw.Draw(modified_image)
+
+        #elif title_w < text_w and title_w < footer_w:
+        #    modified_image = new_image.resize(size=(footer_w + 75, text_h + 85))
+        #    modified_image_draw = ImageDraw.Draw(modified_image)
+
+        #else:
+        #    modified_image = new_image.resize(size=(text_w + 75, text_h + 85))
+        #    modified_image_draw = ImageDraw.Draw(modified_image)
+
         modified_image.paste(new_watermark, (modified_image.width - 75, text_h), mask=new_watermark)
-        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title,
-                                 fill='#d1d0b0', font=title_font)
-        modified_image_draw.text(xy=(10, 75), text=self.text,
-                                 fill='#d1d0b0', font=text_font)
-        modified_image.save(imagify_path)
+        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0', font=title_font)
+        modified_image_draw.text(xy=(10, 65), text=self.text, fill='#d1d0b0', font=text_font)
+        modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"{self.footer}", fill='#d1d0b0', font=footer_font)
+
+        bordered = ImageOps.expand(modified_image, border=2, fill='#E6007A')
+        bordered.save(imagify_path)
+
+        #modified_image.save(imagify_path)
         return imagify_path
 
 
@@ -195,8 +225,11 @@ class CoinGecko:
         self.url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd&C{currency}"
 
     def price(self):
-        api_response = json.loads(urlopen(url=self.url, timeout=60).read())
-        return '${:,.2f}'.format(api_response[self.coin][self.currency])
+        try:
+            api_response = json.loads(urlopen(url=self.url, timeout=30).read())
+            return '{:,.2f}'.format(api_response[self.coin][self.currency])
+        except Exception as cg_err:
+            return 0
 
 
 class Tweet:
@@ -213,12 +246,12 @@ class Tweet:
         try:
             config.api.update_status(f"{message} #{hashtag}")
             print("🐤 tweet successfully sent!")
-        except tweepy.error.TweepError as error:
-            if error == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
+        except Exception as err
+            if err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
                 pass
             else:
-                raise error
+                print(err)
 
 
 class GitWatch:
