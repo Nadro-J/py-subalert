@@ -36,14 +36,13 @@ class TransactionSubscription:
         data = {}
 
         for extrinsic in result['extrinsics']:
+            if extrinsic["call"]["call_function"].name != "transfer":
+                continue
 
-            if extrinsic.address:
-                signed_by_address = extrinsic.address.value
+            if 'address' in extrinsic:
+                signed_by_address = extrinsic['address'].value
             else:
                 signed_by_address = None
-
-            if extrinsic.call.name != "transfer":
-                continue
 
             data.update(
                 {
@@ -51,67 +50,76 @@ class TransactionSubscription:
                 }
             )
 
-            receipt = ExtrinsicReceipt(
-                substrate=self.substrate,
-                extrinsic_hash=f"0x{extrinsic.extrinsic_hash}",
-                block_hash=block_hash
-            )
+            # Loop through call params
+            for param in extrinsic["call"]['call_args']:
+                name = param['name'].value
+                value = param['value'].value
 
-            if not receipt.is_success:
-                print("Extrinsic not successful")
-                return 0
-            else:
+                if 'Balance' in param['typeName'].value:
+                    extrinsic_hash = extrinsic.value['extrinsic_hash']
+                    if isinstance(value, int):
+                        value = '{}'.format(value / 10 ** self.substrate.token_decimals)
+                    else:
+                        value = '{}'.format(value)
 
-                # Loop through call params
-                for param in extrinsic.params:
-                    if param['type'] == 'Compact<Balance>':
-                        if isinstance(param['value'], int):
-                            param['value'] = '{}'.format(param['value'] / 10 ** self.substrate.token_decimals)
-                        else:
-                            param['value'] = '{}'.format(param['value'])
 
-                    data[signed_by_address].update({param['name']: param['value']})
+                    receipt = ExtrinsicReceipt(
+                        substrate=self.substrate,
+                        extrinsic_hash=extrinsic_hash,
+                        block_hash=block_hash)
+                    #  [ unsupported operand type(s) error ]
+                    #  self.__total_fee_amount += event.value['attributes']
+                    #  TypeError: unsupported operand type(s) for +=: 'int' and 'tuple'
+                    # print(receipt.is_success)
 
-                destination = data[signed_by_address]['dest']
-                amount = float(data[signed_by_address]['value'])
+                    print(f"-- Extrinsic ] ---\n"
+                          f"Extrinsic_hash: {extrinsic_hash}\n"
+                          f"Name: {name}\n"
+                          f"Value: {value}\n"
+                          f"Type: {param['typeName']}\n"
+                          f"------------------\n")
 
-                price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
-                usd_amount = amount * float(price.replace('$', ''))
+                data[signed_by_address].update({name: value})
 
-                # ignore transactions if destination = signed_by_address
-                if usd_amount > threshold and destination != signed_by_address:
+            destination = data[signed_by_address]['dest']
+            amount = float(data[signed_by_address]['value'])
 
-                    # Sender
-                    sender_account = self.system_account(signed_by_address)['data']
-                    sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
-                    sender_locked = sender_account['miscFrozen'] / 10 ** self.substrate.token_decimals
+            price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
+            usd_amount = amount * float(price.replace('$', ''))
 
-                    # Destination
-                    destination_account = self.system_account(destination)['data']
-                    destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
-                    destination_locked = destination_account['miscFrozen'] / 10 ** self.substrate.token_decimals
+            # ignore transactions if destination = signed_by_address
+            if usd_amount > threshold and destination != signed_by_address:
 
-                    s_whale_emoji, r_whale_emoji = '', ''
-                    if sender_balance > whale_threshold or sender_locked > whale_threshold:
-                        s_whale_emoji = '🐳'
-                    if destination_balance > whale_threshold or destination_locked > whale_threshold:
-                        r_whale_emoji = '🐳'
+                # Sender
+                sender_account = self.system_account(signed_by_address)['data']
+                sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
+                sender_locked = sender_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
-                    usd_sender_balance = sender_balance * float(price.replace('$', ''))
-                    usd_sender_locked = sender_locked * float(price.replace('$', ''))
+                # Destination
+                destination_account = self.system_account(destination)['data']
+                destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
+                destination_locked = destination_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
-                    usd_destination_balance = destination_balance * float(price.replace('$', ''))
-                    usd_destination_locked = destination_locked * float(price.replace('$', ''))
+                s_whale_emoji, r_whale_emoji = '', ''
+                if sender_balance > whale_threshold or sender_locked > whale_threshold:
+                    s_whale_emoji = '🐳'
+                if destination_balance > whale_threshold or destination_locked > whale_threshold:
+                    r_whale_emoji = '🐳'
 
-                    tweet_body = (
-                        f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
-                        f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
-                        f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
-                        f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
-                        f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
-                        f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
+                usd_sender_balance = sender_balance * float(price.replace('$', ''))
+                usd_sender_locked = sender_locked * float(price.replace('$', ''))
 
-                    self.tweet.alert(tweet_body)
+                usd_destination_balance = destination_balance * float(price.replace('$', ''))
+                usd_destination_locked = destination_locked * float(price.replace('$', ''))
+
+                tweet_body = (
+                    f"{amount:,.2f} ${self.ticker} ({price} - ${subalert.base.Numbers(usd_amount).human_format()}) successfully sent to {destination}\n\n"
+                    f"🏦 Sender balance: {subalert.base.Numbers(sender_balance).human_format()} (${subalert.base.Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                    f"🔒 Locked: {subalert.base.Numbers(sender_locked).human_format()} (${subalert.base.Numbers(usd_sender_locked).human_format()})\n\n"
+                    f"🏦 Receiver balance: {subalert.base.Numbers(destination_balance).human_format()} (${subalert.base.Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                    f"🔒 Locked: {subalert.base.Numbers(destination_locked).human_format()} (${subalert.base.Numbers(usd_destination_locked).human_format()})\n\n"
+                    f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
+                self.tweet.alert(tweet_body)
 
     def new_block(self, obj, update_nr, subscription_id):
         """
