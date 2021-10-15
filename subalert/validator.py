@@ -71,6 +71,8 @@ class ValidatorWatch:
         )
 
         for validator_address, validator_attributes in result:
+            if validator_attributes is None:
+                continue
             validators_list.update({validator_address.value: validator_attributes.value})
 
         return validators_list
