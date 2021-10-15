@@ -38,7 +38,12 @@ class TransactionSubscription:
         data = {}
 
         for extrinsic in result['extrinsics']:
-            if extrinsic["call"]["call_function"].name != "transfer":
+            if extrinsic is None:
+                continue
+
+            extrinsic_function_call = extrinsic["call"]["call_function"]["name"]
+            print(f"extrinsic_function_call: {extrinsic_function_call}")
+            if extrinsic_function_call != "transfer":
                 continue
 
             extrinsic_hash = extrinsic.value['extrinsic_hash']
