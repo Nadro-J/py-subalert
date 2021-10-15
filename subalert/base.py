@@ -246,7 +246,7 @@ class Tweet:
         try:
             config.api.update_status(f"{message} #{hashtag}")
             print("🐤 tweet successfully sent!")
-        except Exception as err
+        except Exception as err:
             if err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
                 pass
