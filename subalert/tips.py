@@ -5,15 +5,14 @@ import time
 
 import deepdiff
 
-import subalert.base
+from subalert.base import Tweet, Configuration, Utils, Queue
 
 
 class TipsSubscription:
     def __init__(self):
-        self.tweet = subalert.base.Tweet()
-        self.config = subalert.base.Configuration()
-        self.utils = subalert.base.Utils()
-        self.queue = subalert.base.Queue()
+        self.config = Configuration()
+        self.utils = Utils()
+        self.queue = Queue()
         self.substrate = self.config.substrate
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
@@ -41,8 +40,8 @@ class TipsSubscription:
         result = self.substrate.query(
             module='Tips',
             storage_function='Tips',
-            params=[tip_hash]
-        )
+            params=[tip_hash])
+
         return result.serialize()
 
     def tip_reason(self, reason_hash):
@@ -64,9 +63,9 @@ class TipsSubscription:
         tips_data = self.tips_info()
 
         if not os.path.isfile('data-cache/tips.cache'):
-            subalert.base.Utils.cache_data('data-cache/tips.cache', tips_data)
+            self.utils.cache_data('data-cache/tips.cache', tips_data)
 
-        cached_tips_data = subalert.base.Utils.open_cache('data-cache/tips.cache')
+        cached_tips_data = self.utils.open_cache('data-cache/tips.cache')
 
         difference = deepdiff.DeepDiff(cached_tips_data, tips_data, ignore_order=True).to_json()
         result = json.loads(difference)
@@ -79,7 +78,7 @@ class TipsSubscription:
             # type_change ['closes'] goes from null to an integer value (block height) of when the tip will be closed.
             if key == 'dictionary_item_added':
                 for tip_hash in value:
-                    tip_hash = tip_hash.replace("root['", "").replace("']", "")
+                    tip_hash = tip_hash.replace("root['", "").replace("']", "").replace("['finders_fee", "")
                     reason = self.tip_reason(self.tip_info(tip_hash)['reason'])
 
                     tweet_body = (
@@ -116,9 +115,7 @@ class TipsSubscription:
         # requests.
         if self.queue.size() >= 1:
             for tweet in self.queue.items:
-                print(tweet)
-                self.tweet.alert(tweet)
-                print("---")
+                Tweet(message=tweet).alert()
                 time.sleep(5)
 
-        subalert.base.Utils.cache_data('data-cache/tips.cache', tips_data)
+        self.utils.cache_data('data-cache/tips.cache', tips_data)

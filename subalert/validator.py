@@ -4,15 +4,14 @@ import time
 
 import deepdiff
 
-import subalert.base
+from subalert.base import Tweet, Configuration, Queue, Utils
 
 
 class ValidatorWatch:
     def __init__(self):
-        self.tweet = subalert.base.Tweet()
-        self.config = subalert.base.Configuration()
-        self.queue = subalert.base.Queue()
-        self.utils = subalert.base.Utils()
+        self.config = Configuration()
+        self.queue = Queue()
+        self.utils = Utils()
         self.substrate = self.config.substrate
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
         self.commission_change = self.config.yaml_file['alert']['validator_change']
@@ -89,9 +88,9 @@ class ValidatorWatch:
         change = ""
 
         if not os.path.isfile('data-cache/validators-commission.cache'):
-            subalert.base.Utils.cache_data('data-cache/validators-commission.cache', commission_data)
+            self.utils.cache_data('data-cache/validators-commission.cache', commission_data)
 
-        cached_commission_data = subalert.base.Utils.open_cache('data-cache/validators-commission.cache')
+        cached_commission_data = self.utils.open_cache('data-cache/validators-commission.cache')
 
         # use DeepDiff to check if any values have changed since we ran has_commission_updated().
         difference = deepdiff.DeepDiff(cached_commission_data, commission_data, ignore_order=True).to_json()
@@ -159,6 +158,6 @@ class ValidatorWatch:
             # requests.
             if self.queue.size() >= 1:
                 for tweet in self.queue.items:
-                    self.tweet.alert(tweet)
+                    Tweet(message=tweet).alert()
                     time.sleep(5)
-            subalert.base.Utils.cache_data('data-cache/validators-commission.cache', commission_data)
+            self.utils.cache_data('data-cache/validators-commission.cache', commission_data)

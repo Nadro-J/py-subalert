@@ -1,4 +1,4 @@
-import subalert.base
+from subalert.base import Tweet, Configuration, Numbers, CoinGecko
 import matplotlib.pyplot as plt
 import matplotlib.image as image
 import matplotlib.cbook as cbook
@@ -7,8 +7,7 @@ import os.path
 
 class EraAnalysis:
     def __init__(self):
-        self.tweet = subalert.base.Tweet()
-        self.config = subalert.base.Configuration()
+        self.config = Configuration()
         self.substrate = self.config.substrate
         self.token_decimal = self.substrate.token_decimals
         self.hashtag = self.config.yaml_file['twitter']['hashtag']
@@ -52,29 +51,27 @@ class EraAnalysis:
         # This is used to plot the graph in matplotlib.
         for era, value in sorted(sort_orders):
             eras.append(era), values.append(
-                float(subalert.base.Numbers(int(value) / 10 ** self.substrate.token_decimals).large_to_dec()))
+                float(Numbers(int(value) / 10 ** self.substrate.token_decimals).large_to_dec()))
 
         with cbook.get_sample_data(os.path.abspath(f"logos/{self.hashtag}.png")) as file:
             img = image.imread(file)
 
-        price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
+        price = CoinGecko(coin=self.hashtag, currency='usd').price()
         era_diff_text = ""
         total_eras = len(eras) - 1
         current_index = eras[total_eras]
         previous_index = eras[total_eras - self.eras_per_day]
         era_difference = int(era_data[current_index]) - int(era_data[previous_index])
         usd_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
-        current_stake = subalert.base.Numbers(
-            int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
-        current_stake_usd = int(era_data[current_index]) / 10 ** self.substrate.token_decimals * float(
-            price.replace('$', ''))
+        current_stake = Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
+        current_stake_usd = int(era_data[current_index]) / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         percentage_locked = int(era_data[current_index]) / self.circulating_supply()
 
         # Change icon depending if more or less has been bonded.
         if era_difference < 0:
-            era_diff_text = f"In the last 24hrs, ⬇️{subalert.base.Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${subalert.base.Numbers(abs(usd_difference)).human_format()}) were unbonded."
+            era_diff_text = f"In the last 24hrs, ⬇️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(abs(usd_difference)).human_format()}) were unbonded."
         elif era_difference >= 0:
-            era_diff_text = f"In the last 24hrs, ⬆️{subalert.base.Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${subalert.base.Numbers(usd_difference).human_format()}) were bonded."
+            era_diff_text = f"In the last 24hrs, ⬆️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(usd_difference).human_format()}) were bonded."
 
         # Create graph using eras/values
         fig, ax = plt.subplots()
@@ -93,7 +90,7 @@ class EraAnalysis:
 
         tweet_body = (
             f"There are currently {current_stake} ${self.ticker} "
-            f"(${subalert.base.Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
+            f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
             f"{era_diff_text}")
 
-        self.tweet.tweet_media(filename='TotalStake84Eras.png', message=tweet_body)
+        Tweet(filename='TotalStake84Eras.png', message=tweet_body).alert()

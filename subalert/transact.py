@@ -6,7 +6,6 @@ from substrateinterface import ExtrinsicReceipt
 
 class TransactionSubscription:
     def __init__(self):
-        self.tweet = Tweet()
         self.config = Configuration()
         self.subquery = SubQuery()
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
@@ -128,7 +127,7 @@ class TransactionSubscription:
                 print(f"-- Tweet: Debugging ] ---\n"
                       f"{tweet_body}\n"
                       f"-------------------------\n")
-                self.tweet.alert(tweet_body)
+                Tweet(message=tweet_body).alert()
 
     def new_block(self, obj, update_nr, subscription_id):
         """
