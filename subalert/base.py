@@ -27,7 +27,6 @@ class Configuration:
         # Create API object
         self.api = tweepy.API(self.auth)
 
-
 config = Configuration()
 hashtag = config.yaml_file['twitter']['hashtag']
 substrate = config.substrate
@@ -233,26 +232,25 @@ class CoinGecko:
 
 
 class Tweet:
-    @staticmethod
-    def tweet_media(filename, message):
-        try:
-            config.api.update_with_media(filename, f"{message} #{hashtag}")
-            print("🐤 tweet successfully sent!")
-        except Exception as err:
-            print(err)
+    def __init__(self, message, filename=None):
+        self.filename = filename
+        self.message = message
 
-    @staticmethod
-    def alert(message):
+    def alert(self):
         try:
-            config.api.update_status(f"{message} #{hashtag}")
-            print("🐤 tweet successfully sent!")
-        except Exception as err:
-            if err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
+            if self.filename:
+                media = config.api.media_upload(self.filename)
+                config.api.update_status(status=self.message, media_ids=[media.media_id])
+                print("🐤 tweet successfully sent!")
+            else:
+                config.api.update_status(status=self.message)
+                print("🐤 tweet successfully sent!")
+        except Exception as tweepy_err:
+            if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
                 pass
             else:
-                print(err)
-
+                print(f"Tweepy error: {tweepy_err}")
 
 class GitWatch:
     @staticmethod
