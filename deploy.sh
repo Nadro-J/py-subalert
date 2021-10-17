@@ -9,9 +9,13 @@
 # ----------------------------------------------------------
 user=$(whoami)
 
-echo "[+] Installing pythn3-pip/pip3 pre-requisites"
+echo "[+] Installing python3-pip/pip3 pre-requisites"
 apt install python3-pip
 pip3 install substrate-interface scalecodec requests deepdiff tweepy matplotlib pillow
+
+echo "[+] Installing PM2 process manager"
+apt install npm
+npm install pm2@latest -g
 
 echo "[+] Attempting to create PM2 application(s)"
 pm2 start tx-alert.py --name transactions --interpreter=python3
