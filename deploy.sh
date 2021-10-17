@@ -9,7 +9,8 @@
 # ----------------------------------------------------------
 user=$(whoami)
 
-echo "[+] Installing pip3 pre-requisites"
+echo "[+] Installing pythn3-pip/pip3 pre-requisites"
+apt install python3-pip
 pip3 install substrate-interface scalecodec requests deepdiff tweepy matplotlib pillow
 
 echo "[+] Attempting to create PM2 application(s)"
