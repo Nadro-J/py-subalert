@@ -9,6 +9,9 @@
 # ----------------------------------------------------------
 user=$(whoami)
 
+echo "[+] Installing pip3 pre-requisites"
+pip3 install substrate-interface scalecodec requests deepdiff tweepy matplotlib pillow
+
 echo "[+] Attempting to create PM2 application(s)"
 pm2 start tx-alert.py --name transactions --interpreter=python3
 pm2 start referenda-alert.py --name referenda --interpreter=python3
