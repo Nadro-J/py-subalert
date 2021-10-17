@@ -7,6 +7,7 @@ import tweepy
 import yaml
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from substrateinterface import SubstrateInterface
+from pathlib import Path
 
 
 class Configuration:
@@ -98,22 +99,24 @@ class Imagify:
         watermark = Image.open(f'logos/{hashtag}_White.png')
         new_watermark = watermark.resize((75, 75), Image.ANTIALIAS)
         guid = uuid.uuid4()
-        imagify_path = f"logos/Imagify/{guid}.png"
+
+        Path("imagify/").mkdir(exist_ok=True)
+        imagify_path = f"imagify/images/{guid}.png"
 
         # background
         new_image = Image.new('RGBA', (400, 300), color='#36393f')
         new_image_draw = ImageDraw.Draw(new_image)
 
         # text font settings
-        text_font = ImageFont.truetype(font="fonts/SourceCodePro-Regular.ttf", size=16)
+        text_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Regular.ttf", size=16)
         text_w, text_h = new_image_draw.textsize(self.text, text_font)
 
         # title font settings
-        title_font = ImageFont.truetype(font="fonts/SourceCodePro-Bold.ttf", size=22)
+        title_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=22)
         title_w, title_h = new_image_draw.textsize(self.title, title_font)
 
         # footer font settings
-        footer_font = ImageFont.truetype(font="fonts/SourceCodePro-Bold.ttf", size=12)
+        footer_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=12)
         footer_w, footer_h = new_image_draw.textsize(self.footer, title_font)
 
         # resize if title_width is larger than text_width
@@ -132,13 +135,13 @@ class Imagify:
             modified_image = new_image.resize(size=(footer_w, text_h + 85))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        #elif title_w < text_w and title_w < footer_w:
-        #    modified_image = new_image.resize(size=(footer_w + 75, text_h + 85))
-        #    modified_image_draw = ImageDraw.Draw(modified_image)
+        elif title_w < text_w and title_w < footer_w:
+            modified_image = new_image.resize(size=(footer_w + 75, text_h + 85))
+            modified_image_draw = ImageDraw.Draw(modified_image)
 
-        #else:
-        #    modified_image = new_image.resize(size=(text_w + 75, text_h + 85))
-        #    modified_image_draw = ImageDraw.Draw(modified_image)
+        else:
+            modified_image = new_image.resize(size=(text_w + 75, text_h + 85))
+            modified_image_draw = ImageDraw.Draw(modified_image)
 
         modified_image.paste(new_watermark, (modified_image.width - 75, text_h), mask=new_watermark)
         modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0', font=title_font)

@@ -7,7 +7,6 @@ import deepdiff
 
 class PhragmenSubscription:
     def __init__(self):
-        self.tweet = Tweet()
         self.config = Configuration()
         self.subquery = SubQuery()
         self.substrate = self.config.substrate
