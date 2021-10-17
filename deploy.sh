@@ -16,7 +16,7 @@ pm2 save
 pm2 startup
 
 echo "[+] Creating cronjobs if they haven't been created already"
-(crontab -l; echo "*/30 * * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/commission.py >> /$user/py-subalert/logs/validator_commission.log 2>&1") | sort -u | crontab -
+(crontab -l; echo "*/30 * * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/validator-commission.py >> /$user/py-subalert/logs/validator_commission.log 2>&1") | sort -u | crontab -
 (crontab -l; echo "0 17 * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/era-graph.py >> /$user/py-subalert/logs/era-graph.log 2>&1") | sort -u | crontab -
 (crontab -l; echo "0 * * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/tip-alert.py >> /$user/py-subalert/logs/tip-alert.log 2>&1") | sort -u | crontab -
 (crontab -l; echo "0 * * * * cd /$user/py-subalert && /usr/bin/python3 /$user/py-subalert/latest_repo_release.py >> /$user/py-subalert/logs/latest_repo_release.log 2>&1") | sort -u | crontab -
