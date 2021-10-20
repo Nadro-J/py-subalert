@@ -87,7 +87,6 @@ class TipsSubscription:
                         f"https://www.dotreasury.com/{self.ticker}/tips/{tip_hash}"
                     )
                     self.queue.enqueue(tweet_body)
-
             elif key == 'type_changes':
                 for tip_hash, attributes in result[key].items():
                     if 'closes' in tip_hash:
@@ -95,8 +94,10 @@ class TipsSubscription:
                         reason = self.tip_reason(cached_tips_data[tip_hash]['reason'])
                         close_height = attributes['new_value']
                         tip_values = []
-                        for tip in tips_data[tip_hash]['tips']:
-                            tip_values.append(tip['balance'])
+
+                        # tips_data[tip_hash]['tips'] = tuple: (tipper, amount)
+                        for tipper, amount in tips_data[tip_hash]['tips']:
+                            tip_values.append(amount)
 
                         median = statistics.median(tip_values) / 10 ** self.substrate.token_decimals
 
@@ -110,6 +111,8 @@ class TipsSubscription:
                                 f"https://www.dotreasury.com/{self.ticker}/tips/{tip_hash}"
                             )
                             self.queue.enqueue(tweet_body)
+            else:
+                continue
 
         # When the queue size is greater than 1, throttle how quick it tweets by 5 seconds to mitigate rapid API
         # requests.
