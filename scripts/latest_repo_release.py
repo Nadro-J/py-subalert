@@ -6,7 +6,6 @@ from subalert.base import GitWatch, Tweet
 import os.path
 import json
 
-tweet = Tweet()
 git = GitWatch()
 latest = git.latest_release()
 
@@ -33,5 +32,5 @@ if git.has_updated(latest, cached_file):
 {latest['html_url']}
 """)
 
-    tweet.alert(tweet_body)
+    Tweet(message=tweet_body).alert()
     git.cache_release(latest)
