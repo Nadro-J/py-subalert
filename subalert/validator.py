@@ -103,17 +103,17 @@ class ValidatorWatch:
         print("🔧 changes have been found since the last time has_commission_updated was invoked")
 
         for key, value in result.items():
-            if key == 'dictionary_item_added':
-                for new_address in value:
-                    address = new_address.replace("root['", "").replace("']", "").replace("['commission", "")
-                    tweet_body = (
-                            f"👨‍🔧 new address found, {address}\n"
-                            f"{self.check_identity(address)}\n\n"
-                            f"https://{self.hashtag.lower()}.subscan.io/validator/{address}")
+#            if key == 'dictionary_item_added':
+#                for new_address in value:
+#                    address = new_address.replace("root['", "").replace("']", "").replace("['commission", "")
+#                    tweet_body = (
+#                            f"👨‍🔧 new address found, {address}\n"
+#                            f"{self.check_identity(address)}\n\n"
+#                            f"https://{self.hashtag.lower()}.subscan.io/validator/{address}")
+#
+#                    self.queue.enqueue(tweet_body)
 
-                    self.queue.enqueue(tweet_body)
-
-            elif key == 'values_changed':
+            if key == 'values_changed':
                 # format DeepDiff into usable json
                 for obj, attributes in result['values_changed'].items():
                     if 'blocked' in obj:
@@ -159,5 +159,5 @@ class ValidatorWatch:
             if self.queue.size() >= 1:
                 for tweet in self.queue.items:
                     Tweet(message=tweet).alert()
-                    time.sleep(5)
+                    time.sleep(10)
             self.utils.cache_data('data-cache/validators-commission.cache', commission_data)
