@@ -1,6 +1,7 @@
 import subalert.base
-from subalert.base import Tweet, Configuration, SubQuery
+from subalert.base import Tweet, Configuration, SubQuery, Imagify, Queue, Utils
 import datetime
+import time
 import json, os
 import deepdiff
 
@@ -9,6 +10,8 @@ class PhragmenSubscription:
     def __init__(self):
         self.config = Configuration()
         self.subquery = SubQuery()
+        self.queue = Queue()
+        self.utils = Utils()
         self.substrate = self.config.substrate
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
 
@@ -69,13 +72,11 @@ class PhragmenSubscription:
 
     def has_voting_updated(self):
         voting_data = self.voting_info()
-        stake_change = {}
-        change = ''
 
         if not os.path.isfile('data-cache/council-voters.cache'):
-            subalert.base.Utils.cache_data('data-cache/council-voters.cache', voting_data)
+            self.utils.cache_data('data-cache/council-voters.cache', voting_data)
 
-        cached_voting_data = subalert.base.Utils.open_cache('data-cache/council-voters.cache')
+        cached_voting_data = self.utils.open_cache('data-cache/council-voters.cache')
 
         # use DeepDiff to check if any values have changed since we ran has_commission_updated().
         difference = deepdiff.DeepDiff(cached_voting_data, voting_data, ignore_order=True).to_json()
@@ -90,33 +91,18 @@ class PhragmenSubscription:
             if key == 'dictionary_item_added':
                 for new_candidate in value:
                     voter_address = new_candidate.replace("root['", "").replace("']", "")
-
                     candidate_info = self.voting_info(voter_address)
                     candidates = ""
+                    
                     for voting in candidate_info['votes']:
-                        candidates += f"{self.subquery.check_identity(address=voting)}\n"
+                        candidates += f"{self.subquery.check_identity(address=voting).replace(' ', '')}\n"
 
-                    timestamp = datetime.datetime.now().strftime("%d-%m-%Y %I:%M:%S%p")
-                    image_path = subalert.base.Imagify(title=f"{self.subquery.check_identity(address=voter_address)} voted for",
-                                          text=candidates, footer=f"{timestamp}").create()
+                    identity = self.subquery.check_identity(address=voter_address)
+                    timestamp = datetime.datetime.now().strftime("%d-%m-%Y")
+                    image_path = Imagify(title=f"{identity} voted for",
+                                         text=candidates,
+                                         footer=f"{timestamp} - @PolkadotTxs").create()
 
-
-
-                    #print(f"Info: {self.voting_info(candidate_address)}")
-            elif key == 'values_changed':
-                for obj, attributes in result['values_changed'].items():
-                    if 'stake' in obj:
-                        address = obj.replace("root['", "").replace("']", "").replace("['stake", "")
-                        stake_change.update({address: attributes})
-
-                for voter, changed_attributes in stake_change.items():
-                    old_value = int(changed_attributes['old_value']) / 10 ** self.substrate.token_decimals
-                    new_value = int(changed_attributes['new_value']) / 10 ** self.substrate.token_decimals
-
-                    if new_value > old_value:
-                        change = f"has increased their stake from {old_value} to {new_value} $DOT"
-
-                    if new_value < old_value:
-                        change = f"has decreased their stake from {old_value} to {new_value} $DOT"
-
-                    print(f"{self.subquery.check_identity(voter)} {change}")
+                    Tweet(message=f"New #{self.hashtag} council votes!", filename=image_path).alert()
+                    time.sleep(5)
+        self.utils.cache_data('data-cache/council-voters.cache', voting_data)
