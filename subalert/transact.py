@@ -1,6 +1,6 @@
 import json
 import subalert.base
-from subalert.base import Numbers, Tweet, Configuration, SubQuery
+from subalert.base import Numbers, Tweet, Configuration, SubQuery, CoinGecko, Queue
 from substrateinterface import ExtrinsicReceipt
 
 
@@ -8,6 +8,7 @@ class TransactionSubscription:
     def __init__(self):
         self.config = Configuration()
         self.subquery = SubQuery()
+        self.queue = Queue()
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
@@ -26,108 +27,90 @@ class TransactionSubscription:
         )
         return json.loads(str(result).replace("\'", "\""))
 
-    def check_transaction(self, block_hash, threshold, whale_threshold):
+    def check_transaction(self, block_height, threshold, whale_threshold):
         """
-        :param block_hash:
+        :param block_height:
         :param threshold: >= the amount to alert on
         :return: How much has been sent from one address to another, who it was signed by and the receivers
                  balance, reserved, miscFrozen.
         """
-        result = self.substrate.get_block(block_hash=block_hash, ignore_decoding_errors=True)
-        data = {}
+        result = self.substrate.get_block(block_number=block_height, ignore_decoding_errors=True)
+        blockhash = result['header']['hash']
+        parsed_extrinsic_data = {}
 
         for extrinsic in result['extrinsics']:
+            extrinsic_hash = extrinsic.value['extrinsic_hash']
+
             if extrinsic is None:
                 continue
 
-            extrinsic_function_call = extrinsic["call"]["call_function"]["name"]
-            print(f"extrinsic_function_call: {extrinsic_function_call}")
-            if extrinsic_function_call != "transfer":
-                continue
-
-            extrinsic_hash = extrinsic.value['extrinsic_hash']
             receipt = ExtrinsicReceipt(
                 substrate=self.substrate,
                 extrinsic_hash=extrinsic_hash,
-                block_hash=block_hash)
+                block_hash=blockhash)
 
-            if not receipt.is_success:
-                print("[!] Extrinsic failed, skipping")
-                continue
+            # only process extrinsic(s) where call_function is == 'transfer' and the extrinsic is successful.
+            if extrinsic['call']['call_function']['name'] == "transfer" and receipt.is_success:
+                if 'address' in extrinsic:
+                    signed_by_address = extrinsic['address'].value
+                else:
+                    continue
 
-            if 'address' in extrinsic:
-                signed_by_address = extrinsic['address'].value
-            else:
-                signed_by_address = None
+                parsed_extrinsic_data.update({signed_by_address: {}})
 
-            data.update(
-                {
-                    signed_by_address: {}
-                }
-            )
+                for param in extrinsic.value["call"]['call_args']:
+                    parsed_extrinsic_data[signed_by_address].update({param['name']: param['value']})
 
-            # Loop through call params
-            for param in extrinsic["call"]['call_args']:
-                name = param['name'].value
-                value = param['value'].value
+        if len(parsed_extrinsic_data) != 0:
+            price = CoinGecko(coin='polkadot', currency='usd').price()
 
-                if 'Balance' in param['typeName'].value:
-                    if isinstance(value, int):
-                        value = '{}'.format(value / 10 ** self.substrate.token_decimals)
-                    else:
-                        value = '{}'.format(value)
+            for signer, attributes in parsed_extrinsic_data.items():
+                destination, value = attributes['dest'], attributes['value']
 
-                    print(f"-- Extrinsic: Debugging ] ---\n"
-                          f"Extrinsic_hash: {extrinsic_hash}\n"
-                          f"Function call: {extrinsic['call']['call_function'].name}\n"
-                          f"Type: {param['typeName']}\n"
-                          f"------------------")
+                if isinstance(value, int):
+                    amount = value / 10 ** self.substrate.token_decimals
+                else:
+                    amount = value
 
-                data[signed_by_address].update({name: value})
+                amount_sent = float(amount)
+                amount_sent_usd = amount_sent * float(price)
 
-            destination = data[signed_by_address]['dest']
-            amount = float(data[signed_by_address]['value'])
+                # ignore transactions if destination = signed_by_address
+                if amount_sent_usd > threshold and destination != signer:
 
-            price = subalert.base.CoinGecko(coin=self.hashtag, currency='usd').price()
-            usd_amount = amount * float(price)
+                    # Sender
+                    sender_account = self.system_account(signer)['data']
+                    sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
+                    sender_locked = sender_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
-            # ignore transactions if destination = signed_by_address
-            if usd_amount > threshold and destination != signed_by_address:
+                    # Destination
+                    destination_account = self.system_account(destination)['data']
+                    destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
+                    destination_locked = destination_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
-                # Sender
-                sender_account = self.system_account(signed_by_address)['data']
-                sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
-                sender_locked = sender_account['misc_frozen'] / 10 ** self.substrate.token_decimals
+                    s_whale_emoji, r_whale_emoji = '', ''
+                    if sender_balance > whale_threshold or sender_locked > whale_threshold:
+                        s_whale_emoji = '🐳'
+                    if destination_balance > whale_threshold or destination_locked > whale_threshold:
+                        r_whale_emoji = '🐳'
 
-                # Destination
-                destination_account = self.system_account(destination)['data']
-                destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
-                destination_locked = destination_account['misc_frozen'] / 10 ** self.substrate.token_decimals
+                    usd_sender_balance = sender_balance * float(price.replace('$', ''))
+                    usd_sender_locked = sender_locked * float(price.replace('$', ''))
+                    usd_destination_balance = destination_balance * float(price.replace('$', ''))
+                    usd_destination_locked = destination_locked * float(price.replace('$', ''))
 
-                s_whale_emoji, r_whale_emoji = '', ''
-                if sender_balance > whale_threshold or sender_locked > whale_threshold:
-                    s_whale_emoji = '🐳'
-                if destination_balance > whale_threshold or destination_locked > whale_threshold:
-                    r_whale_emoji = '🐳'
+                    tweet_body = (
+                        f"{amount_sent:,.2f} ${self.ticker} ({price} - ${Numbers(amount_sent_usd).human_format()}) successfully sent to {self.subquery.short_address(destination)}\n\n"
+                        f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
+                        f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
+                        f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
+                        f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
+                        f"https://{self.hashtag.lower()}.subscan.io/extrinsic/{extrinsic_hash}")
 
-                usd_sender_balance = sender_balance * float(price.replace('$', ''))
-                usd_sender_locked = sender_locked * float(price.replace('$', ''))
+                    self.queue.enqueue(tweet_body)
 
-                usd_destination_balance = destination_balance * float(price.replace('$', ''))
-                usd_destination_locked = destination_locked * float(price.replace('$', ''))
-
-                tweet_body = (
-                    f"{amount:,.2f} ${self.ticker} ({price} - ${Numbers(usd_amount).human_format()}) successfully sent to {self.subquery.short_address(destination)}\n\n"
-                    f"🏦 Sender balance: {Numbers(sender_balance).human_format()} (${Numbers(usd_sender_balance).human_format()}) {s_whale_emoji}{s_whale_emoji}\n"
-                    f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
-                    f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
-                    f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
-                    f"https://{self.hashtag.lower()}.subscan.io/extrinsic/{extrinsic_hash}")
-
-                print(f"-- Tweet: Debugging ] ---\n"
-                      f"{tweet_body}\n"
-                      f"-------------------------\n")
-                Tweet(message=tweet_body).alert()
+            for tweet in self.queue.items:
+                Tweet(message=tweet, verbose=True).alert()
 
     def new_block(self, obj, update_nr, subscription_id):
         """
@@ -137,5 +120,5 @@ class TransactionSubscription:
         :return: When a new block occurs, it is checked against check_transaction to see if the amount transacted is
                  greater than the threshold set.
         """
-        print(f"🔨 New block: {obj['header']['parentHash']}")
-        self.check_transaction(obj['header']['parentHash'], self.threshold, self.whale_threshold)
+        print(f"🔨 New block: {obj['header']['number']} produced by {obj['author']}")
+        self.check_transaction(obj['header']['number'], self.threshold, self.whale_threshold)

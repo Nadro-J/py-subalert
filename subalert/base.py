@@ -2,6 +2,7 @@ import json
 import uuid, random
 import urllib.request
 from urllib.request import urlopen
+import time
 
 import tweepy
 import yaml
@@ -70,7 +71,6 @@ class SubQuery:
             address = super_of
 
         for identity_address, information in result:
-            # print(f">>> {identity_address.value}")
             if address == identity_address.value:
                 for identity_type, values in information.value['info'].items():
                     if 'display' in identity_type or 'twitter' in identity_type:
@@ -97,7 +97,7 @@ class Imagify:
 
     def create(self):
         watermark = Image.open(f'logos/{hashtag}_White.png')
-        new_watermark = watermark.resize((75, 75), Image.ANTIALIAS)
+        new_watermark = watermark.resize((50, 50), Image.ANTIALIAS)
         guid = uuid.uuid4()
 
         Path("imagify/").mkdir(exist_ok=True)
@@ -116,34 +116,24 @@ class Imagify:
         title_w, title_h = new_image_draw.textsize(self.title, title_font)
 
         # footer font settings
-        footer_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=12)
+        footer_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=10)
         footer_w, footer_h = new_image_draw.textsize(self.footer, title_font)
-
-        # resize if title_width is larger than text_width
-        # title_W > text_w and footer_w
-        print(self.title)
-
-        if title_w > footer_w:
-            print("title-width is > than footer-width")
-            modified_image = new_image.resize(size=(title_w + 25, text_h + 85))
-            modified_image_draw = ImageDraw.Draw(modified_image)
 
         # If the footer is the biggest element by width, adjust the box.
         # footer_w > text_w and title_w
-        if footer_w > text_w:
-            print("footer-width is > than title-width")
-            modified_image = new_image.resize(size=(footer_w, text_h + 85))
+        if title_w > footer_w or title_w > text_w:
+            modified_image = new_image.resize(size=(title_w + 75, text_h + 85))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        elif title_w < text_w and title_w < footer_w:
-            modified_image = new_image.resize(size=(footer_w + 75, text_h + 85))
-            modified_image_draw = ImageDraw.Draw(modified_image)
-
-        else:
+        elif text_w > title_w or text_w > footer_w:
             modified_image = new_image.resize(size=(text_w + 75, text_h + 85))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        modified_image.paste(new_watermark, (modified_image.width - 75, text_h), mask=new_watermark)
+        elif footer_w > title_w or title_w < footer_w:
+            modified_image = new_image.resize(size=(footer_w + 90, text_h + 85))
+            modified_image_draw = ImageDraw.Draw(modified_image)
+
+        modified_image.paste(new_watermark, (modified_image.width - 50, text_h + 35), mask=new_watermark)
         modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0', font=title_font)
         modified_image_draw.text(xy=(10, 65), text=self.text, fill='#d1d0b0', font=text_font)
         modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"{self.footer}", fill='#d1d0b0', font=footer_font)
@@ -151,7 +141,6 @@ class Imagify:
         bordered = ImageOps.expand(modified_image, border=2, fill='#E6007A')
         bordered.save(imagify_path)
 
-        #modified_image.save(imagify_path)
         return imagify_path
 
 
@@ -239,21 +228,28 @@ class Tweet:
         self.filename = filename
         self.message = message
 
-    def alert(self):
+    def alert(self, verbose=False):
         try:
+            if verbose:
+                print(f"   ==== [ Tweepy input ] ======\n"
+                      f"   {self.message}\n")
+
             if self.filename:
                 media = config.api.media_upload(self.filename)
                 config.api.update_status(status=self.message, media_ids=[media.media_id])
                 print("🐤 tweet successfully sent!")
+                time.sleep(5)
             else:
                 config.api.update_status(status=self.message)
                 print("🐤 tweet successfully sent!")
+                time.sleep(5)
         except Exception as tweepy_err:
             if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
                 pass
             else:
                 print(f"Tweepy error: {tweepy_err}")
+
 
 class GitWatch:
     @staticmethod
