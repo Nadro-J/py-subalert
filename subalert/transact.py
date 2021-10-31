@@ -107,10 +107,7 @@ class TransactionSubscription:
                         f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
                         f"https://{self.hashtag.lower()}.subscan.io/extrinsic/{extrinsic_hash}")
 
-                    self.queue.enqueue(tweet_body)
-
-            for tweet in self.queue.items:
-                Tweet(message=tweet, verbose=True).alert()
+                    Tweet().alert(message=tweet_body, verbose=True)
 
     def new_block(self, obj, update_nr, subscription_id):
         """

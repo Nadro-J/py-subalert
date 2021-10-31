@@ -224,25 +224,23 @@ class CoinGecko:
 
 
 class Tweet:
-    def __init__(self, message, filename=None):
-        self.filename = filename
-        self.message = message
-
-    def alert(self, verbose=False):
+    @staticmethod
+    def alert(message, filename=None, verbose=False):
         try:
             if verbose:
                 print(f"   ==== [ Tweepy input ] ======\n"
-                      f"   {self.message}\n")
+                      f"   {message}\n")
 
-            if self.filename:
-                media = config.api.media_upload(self.filename)
-                config.api.update_status(status=self.message, media_ids=[media.media_id])
+            if filename:
+                media = config.api.media_upload(filename)
+                config.api.update_status(status=message, media_ids=[media.media_id])
                 print("🐤 tweet successfully sent!")
                 time.sleep(5)
             else:
-                config.api.update_status(status=self.message)
+                config.api.update_status(status=message)
                 print("🐤 tweet successfully sent!")
                 time.sleep(5)
+
         except Exception as tweepy_err:
             if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
                 print("Disregarding duplicate tweet")
