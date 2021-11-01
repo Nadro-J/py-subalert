@@ -32,5 +32,5 @@ if git.has_updated(latest, cached_file):
 {latest['html_url']}
 """)
 
-    Tweet(message=tweet_body).alert()
+    Tweet().alert(message=tweet_body, verbose=True)
     git.cache_release(latest)

@@ -93,7 +93,7 @@ class PhragmenSubscription:
                     voter_address = new_candidate.replace("root['", "").replace("']", "")
                     candidate_info = self.voting_info(voter_address)
                     candidates = ""
-                    
+
                     for voting in candidate_info['votes']:
                         candidates += f"{self.subquery.check_identity(address=voting).replace(' ', '')}\n"
 
@@ -103,6 +103,5 @@ class PhragmenSubscription:
                                          text=candidates,
                                          footer=f"{timestamp} - @PolkadotTxs").create()
 
-                    Tweet(message=f"New #{self.hashtag} council votes!", filename=image_path).alert()
-                    time.sleep(5)
+                    Tweet().alert(message=f"New #{self.hashtag} council votes!", filename=image_path, verbose=True)
         self.utils.cache_data('data-cache/council-voters.cache', voting_data)

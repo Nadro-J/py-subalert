@@ -158,6 +158,5 @@ class ValidatorWatch:
             # requests.
             if self.queue.size() >= 1:
                 for tweet in self.queue.items:
-                    Tweet(message=tweet).alert()
-                    time.sleep(10)
+                    Tweet().alert(message=tweet, verbose=True)
             self.utils.cache_data('data-cache/validators-commission.cache', commission_data)

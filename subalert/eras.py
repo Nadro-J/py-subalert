@@ -93,4 +93,4 @@ class EraAnalysis:
             f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
             f"{era_diff_text}")
 
-        Tweet(filename='TotalStake84Eras.png', message=tweet_body).alert()
+        Tweet().alert(filename='TotalStake84Eras.png', message=tweet_body, verbose=True)

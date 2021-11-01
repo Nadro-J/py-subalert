@@ -228,8 +228,8 @@ class Tweet:
     def alert(message, filename=None, verbose=False):
         try:
             if verbose:
-                print(f"   ==== [ Tweepy input ] ======\n"
-                      f"   {message}\n")
+                print(f"==== [ Tweepy input ] ======\n"
+                      f"{message}\n")
 
             if filename:
                 media = config.api.media_upload(filename)

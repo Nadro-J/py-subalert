@@ -118,7 +118,6 @@ class TipsSubscription:
         # requests.
         if self.queue.size() >= 1:
             for tweet in self.queue.items:
-                Tweet(message=tweet).alert()
-                time.sleep(5)
+                Tweet().alert(message=tweet, verbose=True)
 
-        self.utils.cache_data('data-cache/tips.cache', tips_data)
+            self.utils.cache_data('data-cache/tips.cache', tips_data)
