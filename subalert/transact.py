@@ -105,7 +105,7 @@ class TransactionSubscription:
                         f"🔒 Locked: {Numbers(sender_locked).human_format()} (${Numbers(usd_sender_locked).human_format()})\n\n"
                         f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
                         f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
-                        f"https://{self.hashtag.lower()}.subscan.io/extrinsic/{extrinsic_hash}")
+                        f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
 
                     Tweet().alert(message=tweet_body, verbose=True)
 
