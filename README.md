@@ -29,7 +29,7 @@ Twitter bots (more to follow):
             * [ ] elected stake
             * [ ] rewards & slashes
             * [ ] commission
-* [ ] produce detailed graphs of the eco system
+* [ ] produce detailed graph(s) of the eco system
     * [x] bonded/unbonded in the last 24hrs
     * [ ] amount locked in crowdloans over X period
 * [x] latest github binary release
