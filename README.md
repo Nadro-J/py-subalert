@@ -24,7 +24,7 @@ Twitter bots (more to follow):
     * [x] successfully closed
 * [ ] validator
     * [x] commission monitoring
-        * [ ] attach graph giving more detail to validators updating commission over X amount of eras
+        * [ ] attach graph(s) giving more detail to validators updating commission over X amount of eras
             * [ ] era points
             * [ ] elected stake
             * [ ] rewards & slashes
