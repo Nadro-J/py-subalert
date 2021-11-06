@@ -94,3 +94,4 @@ class EraAnalysis:
             f"{era_diff_text}")
 
         Tweet().alert(filename='TotalStake84Eras.png', message=tweet_body, verbose=True)
+        self.substrate.close()
