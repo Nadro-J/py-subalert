@@ -1,7 +1,9 @@
 import json
 import uuid, random
+import socket
 import urllib.request
 from urllib.request import urlopen
+import urllib.error
 import time
 
 import tweepy
@@ -9,7 +11,8 @@ import yaml
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from substrateinterface import SubstrateInterface
 from pathlib import Path
-
+import uuid
+import asyncio
 
 class Configuration:
     def __init__(self):
@@ -27,11 +30,50 @@ class Configuration:
                                    self.yaml_file['twitter']['access_token']['secret'])
 
         # Create API object
-        self.api = tweepy.API(self.auth)
+        self.api = tweepy.API(self.auth, wait_on_rate_limit=True)
+
 
 config = Configuration()
 hashtag = config.yaml_file['twitter']['hashtag']
 substrate = config.substrate
+
+
+class SubTweet:
+    def __init__(self, account):
+        self.account = account
+        if self.account not in config.yaml_file['twitter']['sub_twitter']:
+            print("Account not found")
+
+        consumer_key = config.yaml_file['twitter']['sub_twitter'][account]['OAuthHandler']['consumer_key']
+        consumer_sec = config.yaml_file['twitter']['sub_twitter'][account]['OAuthHandler']['consumer_secret']
+        access_key = config.yaml_file['twitter']['sub_twitter'][account]['access_token']['key']
+        access_sec = config.yaml_file['twitter']['sub_twitter'][account]['access_token']['secret']
+        self.authorize = tweepy.OAuthHandler(consumer_key, consumer_sec)
+        self.authorize.set_access_token(access_key, access_sec)
+        self.api = tweepy.API(self.authorize, wait_on_rate_limit=True)
+
+    def alert(self, message, filename=None, verbose=False):
+        try:
+            if verbose:
+                print(f"==== [ Tweepy input ] ======\n"
+                      f"{message}\n")
+
+            if filename:
+                media = self.api.media_upload(filename)
+                self.api.update_status(status=message, media_ids=[media.media_id])
+                print("🐤 tweet successfully sent!")
+                time.sleep(5)
+            else:
+                self.api.update_status(status=message)
+                print("🐤 tweet successfully sent!")
+                time.sleep(5)
+
+        except Exception as tweepy_err:
+            if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
+                print("Disregarding duplicate tweet")
+                pass
+            else:
+                print(f"Tweepy error: {tweepy_err}")
 
 
 class SubQuery:
@@ -40,53 +82,36 @@ class SubQuery:
         start, end = address[:6], address[-6:]
         return f"{start}...{end}"
 
-    @staticmethod
-    def check_super_of(address):
-        """
-        :param address:
-        :return: The super-identity of an alternative 'sub' identity together with its name, within that
-        """
-        result = substrate.query(
-            module='Identity',
-            storage_function='SuperOf',
-            params=[address])
-
-        if result.value is not None:
-            return result.value[0]
-        else:
-            return 0
-
-    def check_identity(self, address, include_twitter: bool=False):
+    def check_identity(self, address):
         """
         :param address:
         :return: Information that is pertinent to identify the entity behind an account.
         """
-        identification = ''
-        result = substrate.query_map(
+        substrate.connect_websocket()
+        result = substrate.query(
             module='Identity',
-            storage_function='IdentityOf')
+            storage_function='IdentityOf',
+            params=[address]
+        )
+        result = result.value
+        #substrate.close()
 
-        super_of = self.check_super_of(address)
-        if super_of:
-            address = super_of
-
-        for identity_address, information in result:
-            if address == identity_address.value:
-                for identity_type, values in information.value['info'].items():
-                    if 'display' in identity_type or 'twitter' in identity_type:
-                        for value_type, value in values.items():
-                            if identity_type == 'display' and value_type == 'Raw':
-                                identification += f"{value}"
-
-                            if include_twitter:
-                                if identity_type == 'twitter' and value_type == 'Raw':
-                                    identification += f" / {value}"
-
-        # Return address if no identity has been setup
-        if identification == '':
+        # return short address if result contains nothing
+        if result is None:
             return self.short_address(address)
         else:
-            return identification
+            display = result['info']['display']
+            twitter = result['info']['twitter']
+
+        if 'Raw' in twitter:
+            if len(twitter['Raw']) > 0:
+                return twitter['Raw']
+
+        if 'Raw' in display:
+            if len(display['Raw']) > 0:
+                return display['Raw']
+
+        return self.short_address(address)
 
 
 class Imagify:
@@ -134,9 +159,11 @@ class Imagify:
             modified_image_draw = ImageDraw.Draw(modified_image)
 
         modified_image.paste(new_watermark, (modified_image.width - 50, text_h + 35), mask=new_watermark)
-        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0', font=title_font)
+        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0',
+                                 font=title_font)
         modified_image_draw.text(xy=(10, 65), text=self.text, fill='#d1d0b0', font=text_font)
-        modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"{self.footer}", fill='#d1d0b0', font=footer_font)
+        modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"{self.footer}", fill='#d1d0b0',
+                                 font=footer_font)
 
         bordered = ImageOps.expand(modified_image, border=2, fill='#E6007A')
         bordered.save(imagify_path)
@@ -179,7 +206,26 @@ class Queue:
         return self.items.pop()
 
     def size(self):
-        return len(self.items)
+        d = self.items[0]
+        # list comprehension
+        return sum([len(d[x]) for x in d if isinstance(d[x], list)])
+
+    def clear(self):
+        return self.items.clear()
+
+    async def process_queue(self):
+        print("+++ process_queue called")
+        counter = 0
+
+        for item in self.items[0]['batch_all']:
+            counter += 1
+            print(f"##[ batch_all ({counter}) ]###\n{item}")
+            #SubTweet("NonFungibleTxs").alert(message=item, verbose=True)
+
+        for item in self.items[0]['transactions']:
+            counter += 1
+            print(f"##[ transaction ({counter}) ]###\n{item}")
+            #SubTweet("KusamaTxs").alert(message=item, verbose=True)
 
 
 class Utils:
@@ -209,6 +255,72 @@ class Utils:
         return candidates
 
 
+class Public_API:
+    def __init__(self, url):
+        self.url = url
+        self.opener = urllib.request.build_opener()
+        self.opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)')]
+
+        urllib.request.install_opener(self.opener)
+        socket.setdefaulttimeout(60)
+
+    def connect(self):
+        try:
+            request = urllib.request.Request(self.url)
+            try:
+                connect = urlopen(url=request).read()
+                return json.loads(connect)
+            except ValueError:
+                return False
+
+        except urllib.error.HTTPError as http_error:
+            return http_error
+
+    def retrieve_image(self, filepath):
+        full_filepath = f"{filepath}/{uuid.uuid4()}.tmp"
+        response = urllib.request.urlretrieve(self.url, full_filepath)
+        content_type = response[1].get_content_type().split("/")[1]
+
+        fullpath = Path(full_filepath)
+        new_path = str(fullpath.rename(fullpath.with_suffix(f".{content_type}")))
+        return new_path
+
+    def IPFS_RMRK(self, rmrk_version):
+        IPFS_data = self.connect()
+
+        if rmrk_version == '1.0.0':
+            if 'metadata' in IPFS_data[0].keys():
+                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                self.url = metadata  # update URL with the one found in ['metadata']
+
+                IPFS_data = self.connect()
+                if 'animation_url' in IPFS_data:
+                    NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    self.url = NFT_image_URL # update URL with the one found in ['image']
+                    return self.retrieve_image("NFT")
+
+                if 'image' in IPFS_data:
+                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    self.url = NFT_image_URL # update URL with the one found in ['image']
+                    return self.retrieve_image("NFT")
+
+        elif rmrk_version == '2.0.0':
+            if 'metadata' in IPFS_data[0].keys():
+                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                self.url = metadata
+
+                print(f"1# - RMRK 2.0.0 Metadata: {metadata}") #log
+
+                IPFS_data = self.connect()
+
+                if 'mediaUri' in IPFS_data:
+                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    print(f"2# - RMRK 2.0.0 Metadata: {metadata}") #log
+                    self.url = metadata
+                    return self.retrieve_image("NFT")
+
+
+# change coingecko to use public API.
 class CoinGecko:
     def __init__(self, coin: str, currency):
         self.coin = coin.lower()
@@ -219,7 +331,7 @@ class CoinGecko:
         try:
             api_response = json.loads(urlopen(url=self.url, timeout=30).read())
             return '{:,.2f}'.format(api_response[self.coin][self.currency])
-        except Exception as cg_err:
+        except urllib.error.HTTPError as http_error:
             return 0
 
 
@@ -235,11 +347,11 @@ class Tweet:
                 media = config.api.media_upload(filename)
                 config.api.update_status(status=message, media_ids=[media.media_id])
                 print("🐤 tweet successfully sent!")
-                time.sleep(5)
+                time.sleep(10)
             else:
                 config.api.update_status(status=message)
                 print("🐤 tweet successfully sent!")
-                time.sleep(5)
+                time.sleep(10)
 
         except Exception as tweepy_err:
             if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
