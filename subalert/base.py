@@ -38,44 +38,6 @@ hashtag = config.yaml_file['twitter']['hashtag']
 substrate = config.substrate
 
 
-class SubTweet:
-    def __init__(self, account):
-        self.account = account
-        if self.account not in config.yaml_file['twitter']['sub_twitter']:
-            print("Account not found")
-
-        consumer_key = config.yaml_file['twitter']['sub_twitter'][account]['OAuthHandler']['consumer_key']
-        consumer_sec = config.yaml_file['twitter']['sub_twitter'][account]['OAuthHandler']['consumer_secret']
-        access_key = config.yaml_file['twitter']['sub_twitter'][account]['access_token']['key']
-        access_sec = config.yaml_file['twitter']['sub_twitter'][account]['access_token']['secret']
-        self.authorize = tweepy.OAuthHandler(consumer_key, consumer_sec)
-        self.authorize.set_access_token(access_key, access_sec)
-        self.api = tweepy.API(self.authorize, wait_on_rate_limit=True)
-
-    def alert(self, message, filename=None, verbose=False):
-        try:
-            if verbose:
-                print(f"==== [ Tweepy input ] ======\n"
-                      f"{message}\n")
-
-            if filename:
-                media = self.api.media_upload(filename)
-                self.api.update_status(status=message, media_ids=[media.media_id])
-                print("🐤 tweet successfully sent!")
-                time.sleep(5)
-            else:
-                self.api.update_status(status=message)
-                print("🐤 tweet successfully sent!")
-                time.sleep(5)
-
-        except Exception as tweepy_err:
-            if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
-                print("Disregarding duplicate tweet")
-                pass
-            else:
-                print(f"Tweepy error: {tweepy_err}")
-
-
 class SubQuery:
     @staticmethod
     def short_address(address):
@@ -192,42 +154,6 @@ class Numbers:
         return '%.2f' % self.number
 
 
-class Queue:
-    def __init__(self):
-        self.items = []
-
-    def is_empty(self):
-        return self.items == []
-
-    def enqueue(self, item):
-        self.items.insert(0, item)
-
-    def dequeue(self):
-        return self.items.pop()
-
-    def size(self):
-        d = self.items[0]
-        # list comprehension
-        return sum([len(d[x]) for x in d if isinstance(d[x], list)])
-
-    def clear(self):
-        return self.items.clear()
-
-    async def process_queue(self):
-        print("+++ process_queue called")
-        counter = 0
-
-        for item in self.items[0]['batch_all']:
-            counter += 1
-            print(f"##[ batch_all ({counter}) ]###\n{item}")
-            #SubTweet("NonFungibleTxs").alert(message=item, verbose=True)
-
-        for item in self.items[0]['transactions']:
-            counter += 1
-            print(f"##[ transaction ({counter}) ]###\n{item}")
-            #SubTweet("KusamaTxs").alert(message=item, verbose=True)
-
-
 class Utils:
     @staticmethod
     def cache_data(filename, data):
@@ -295,18 +221,18 @@ class Public_API:
 
                 IPFS_data = self.connect()
                 if 'animation_url' in IPFS_data:
-                    NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
                 if 'image' in IPFS_data:
-                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
         elif rmrk_version == '2.0.0':
             if 'metadata' in IPFS_data[0].keys():
-                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                 self.url = metadata
 
                 print(f"1# - RMRK 2.0.0 Metadata: {metadata}") #log
@@ -314,7 +240,7 @@ class Public_API:
                 IPFS_data = self.connect()
 
                 if 'mediaUri' in IPFS_data:
-                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
+                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     print(f"2# - RMRK 2.0.0 Metadata: {metadata}") #log
                     self.url = metadata
                     return self.retrieve_image("NFT")
