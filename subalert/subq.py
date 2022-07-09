@@ -1,5 +1,5 @@
 from subalert.subtweet import Tweet
-
+import os
 
 class Queue:
     def __init__(self):
@@ -30,10 +30,11 @@ class Queue:
             for tweet, media in self.items[0]['batch_all']:
                 counter += 1
                 print(f"\n##[ batch_all ({counter}) ]###\n{tweet}\n{media}\n------\n")
-                #Tweet("NonFungibleTxs").alert(message=tweet, filename=media, verbose=True)
+                Tweet("NonFungibleTxs").alert(message=tweet, filename=media, verbose=True)
+                os.remove(path=media)
 
         if len(self.items[0]['transactions']) >= 1 and self.items[0]['transactions'][0] is not None:
             for tx in self.items[0]['transactions']:
                 counter += 1
                 print(f"##[ transaction ({counter}) ]###\n{tx}")
-                #Tweet("KusamaTxs").alert(message=tx, verbose=True)
+                Tweet("KusamaTxs").alert(message=tx, verbose=True)

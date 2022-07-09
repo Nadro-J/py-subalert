@@ -1,10 +1,14 @@
+import asyncio
 import json
 import urllib.parse
 import urllib.request
-from subalert.base import Numbers, Configuration, SubQuery, CoinGecko, Queue, SubTweet, Public_API
+
+from colorama import Fore, Style
+from subalert.base import Numbers, SubQuery, CoinGecko, Public_API
 from substrateinterface import ExtrinsicReceipt
-import asyncio
-from colorama import Fore, Back, Style
+
+from .config import Configuration
+from .subq import Queue
 
 queue = Queue()
 
@@ -22,24 +26,6 @@ class ProcessExtrinsicData:
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
-
-    def system_account(self, address):
-        """
-        :param address: On-chain address to lookup.
-        :return: Information regarding a specific address on the network
-        """
-        result = self.substrate.query(
-            module='System',
-            storage_function='Account',
-            params=[address]
-        )
-        return json.loads(str(result).replace("\'", "\""))
-
-    def remark(self):
-        for param in self.data["call"]['call_args']:
-            remark_event = urllib.parse.unquote(param['value']).split('::')
-            print(f"remark_event_len: {len(remark_event)}")
-            print(remark_event)
 
     @property
     def remark_batch_all(self):
@@ -69,14 +55,13 @@ class ProcessExtrinsicData:
                         return
 
                     if call_function == "remark" and call_counter == 1:
-                        # reference:  https://github.com/rmrk-team/rmrk-spec/tree/master/standards/rmrk2.0.0
+                        # Reference:  https://github.com/rmrk-team/rmrk-spec/tree/master/standards/rmrk2.0.0
                         call_value = urllib.parse.unquote(call['value'])
                         call_split = call_value.split('::')
+
                         # Example below includes snippet from call_split after splitting remark call_functions.
                         # ['RMRK','BUY', '2.0.0', '5105000-0aff6865bed3a66b-VALHELLO-POTION_HEAL-00000001']
                         # ['RMRK', 'SEND', '1.0.0', '9862100-b6e98494bff52d3b1e-SPIRIT-SPIRIT1589-00001589', 'DoVJWXGwy91aAWsaBsmVn4DA78D25mPGfzKxj4aZVihnJ13']
-                        # =========================================================================================
-
                         interaction = call_split[1]
 
                         #  only process specific data i.e. SEND/BUY
@@ -144,7 +129,7 @@ class ProcessExtrinsicData:
 
                         if 'platform-address' in value:
                             nft_fee = float("{:.4f}".format(value['platform-fees']))
-                            tweet_body += f"\n🛒 Platform fee: {self.subquery.check_identity(value['platform-address'])} (Fee: {nft_fee} $KSM)\n\n🖼️ {direct_link}"
+                            tweet_body += f"\n🛒 Platform fee: {self.subquery.check_identity(value['platform-address'])} (Fee: {nft_fee} $KSM)\n\n{direct_link}"
 
                         if nft_price >= 10:
                             tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
@@ -155,9 +140,10 @@ class ProcessExtrinsicData:
                         elif nft_price >= 100:
                             tweet_body += f"\n\n#Over100KSM_NFT_Purchase 💰💰💰💰"
 
-        return tweet_body
+        return tweet_body, nft_local_path
 
-    def transactions(self, blockhash):
+    @property
+    def transactions(self):
         print("checking for transactions")
         """
         :param block_height:
@@ -197,12 +183,12 @@ class ProcessExtrinsicData:
                 if amount_sent_usd > self.threshold and destination != signer:
 
                     # Sender
-                    sender_account = self.system_account(signer)['data']
+                    sender_account = self.subquery.system_account(signer)['data']
                     sender_balance = sender_account['free'] / 10 ** self.substrate.token_decimals
                     sender_locked = sender_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
                     # Destination
-                    destination_account = self.system_account(destination)['data']
+                    destination_account = self.subquery.system_account(destination)['data']
                     destination_balance = destination_account['free'] / 10 ** self.substrate.token_decimals
                     destination_locked = destination_account['misc_frozen'] / 10 ** self.substrate.token_decimals
 
@@ -228,10 +214,18 @@ class ProcessExtrinsicData:
                 return tweet_body
 
 
-class CheckBlock:
+class ExtrinsicMonitor:
     def __init__(self):
         self.config = Configuration()
+        self.subquery = SubQuery()
+        self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
+        self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
+        self.ticker = self.config.yaml_file['chain']['ticker']
         self.substrate = self.config.substrate
+        self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
+
+        # Queue events
+        self.loop = asyncio.get_event_loop()
 
     def extrinsic(self, block, extrinsic_types, check_receipt):
         result = self.substrate.get_block(block_number=block, ignore_decoding_errors=True)
@@ -259,33 +253,6 @@ class CheckBlock:
         self.substrate.websocket.ping()
         return block_hash, extrinsics_list
 
-
-class ExtrinsicMonitor:
-    def __init__(self):
-        self.config = Configuration()
-        self.check = CheckBlock()
-        self.subquery = SubQuery()
-        self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
-        self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
-        self.ticker = self.config.yaml_file['chain']['ticker']
-        self.substrate = self.config.substrate
-        self.hashtag = str(self.config.yaml_file['twitter']['hashtag'])
-
-        # Queue events
-        self.loop = asyncio.get_event_loop()
-
-    def system_account(self, address):
-        """
-        :param address: On-chain address to lookup.
-        :return: Information regarding a specific address on the network
-        """
-        result = self.substrate.query(
-            module='System',
-            storage_function='Account',
-            params=[address]
-        )
-        return json.loads(str(result).replace("\'", "\""))
-
     def new_block(self, obj, update_nr, subscription_id):
         """
         :param obj: passed from subscribe_block_headers()
@@ -298,7 +265,7 @@ class ExtrinsicMonitor:
         block_event_construct = {"transactions": [], 'batch_all': []}
 
         calls = ['batch_all', 'remark', 'transfer']  # 12329404, 12341041
-        blockhash, extrinsics = self.check.extrinsic(block=13060805, extrinsic_types=calls, check_receipt=True)
+        blockhash, extrinsics = self.extrinsic(block=block, extrinsic_types=calls, check_receipt=True)
 
         print(f"{Style.DIM}🔨 New block: {Style.RESET_ALL}{Style.BRIGHT}{block}{Style.RESET_ALL} {Style.DIM}produced by: {Style.RESET_ALL}{Style.BRIGHT}{obj['author']}{Style.RESET_ALL}")
         print(f"{Style.DIM}Monitored extrinsics found in block: {Style.RESET_ALL}{Fore.LIGHTGREEN_EX}{len(extrinsics)}{Style.RESET_ALL}\n")
@@ -309,7 +276,7 @@ class ExtrinsicMonitor:
                 extrinsic_data = ProcessExtrinsicData(extrinsic)
 
                 if call_type == 'transfer':
-                    transaction = extrinsic_data.transactions(blockhash=blockhash)
+                    transaction = extrinsic_data.transactions
                     block_event_construct['transactions'].append(transaction)
 
                 elif call_type == 'batch_all':

@@ -1,4 +1,4 @@
-from subalert.config import Configuration
+from .config import Configuration
 import tweepy
 import time
 
