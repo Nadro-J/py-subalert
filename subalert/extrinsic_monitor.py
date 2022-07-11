@@ -84,7 +84,7 @@ class ProcessExtrinsicData:
                     if call_function == "transfer" and call_counter == 2:
                         if call['name'] == "dest":
                             remark_call_data[batch_author].update({
-                                'nft-creator': call['value']
+                                'lister': call['value']
                             })
 
                         if call['name'] == "value":
@@ -102,6 +102,18 @@ class ProcessExtrinsicData:
                         if call['name'] == "value":
                             remark_call_data[batch_author].update({
                                 'platform-fees': call['value'] / 10 ** 12
+                            })
+
+                    # Creator royalties
+                    if call_function == "transfer" and call_counter == 4:
+                        if call['name'] == "dest":
+                            remark_call_data[batch_author].update({
+                                'nft-creator': call['value']
+                            })
+
+                        if call['name'] == "value":
+                            remark_call_data[batch_author].update({
+                                'nft-creator-royalties': call['value'] / 10 ** 12
                             })
 
         if remark_call_data:
@@ -125,20 +137,25 @@ class ProcessExtrinsicData:
 
                     # Only process purchases > threshold set in yaml file
                     if nft_price >= self.nft_threshold:
-                        tweet_body = (f"RMRK interaction from {self.subquery.check_identity(author)}.\n🧑 Creator: {self.subquery.check_identity(value['nft-creator'])}\n💵 Set price:{nft_price} $KSM\n")
+                        tweet_body = f"RMRK interaction from {self.subquery.check_identity(author)}\n\n🧑 Lister: {self.subquery.check_identity(value['lister'])}\n💵 Received: {nft_price} $KSM\n\n"
+
+                        if 'nft-creator-royalties' in value:
+                            royalties = float("{:.4f}".format(value['nft-creator-royalties']))
+                            tweet_body += f"🎨 Creator: {self.subquery.check_identity(value['nft-creator'])}\n"
+                            tweet_body += f"💵 Creator royalties: {royalties} $KSM\n"
 
                         if 'platform-address' in value:
                             nft_fee = float("{:.4f}".format(value['platform-fees']))
                             tweet_body += f"\n🛒 Platform fee: {self.subquery.check_identity(value['platform-address'])} (Fee: {nft_fee} $KSM)\n\n{direct_link}"
 
-                        if nft_price >= 10:
-                            tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
-                        elif nft_price >= 25:
-                            tweet_body += f"\n\n#Over25KSM_NFT_Purchase 💰💰"
+                        if nft_price >= 100:
+                            tweet_body += f"\n\n#Over100KSM_NFT_Purchase 💰💰💰💰"
                         elif nft_price >= 50:
                             tweet_body += f"\n\n#Over50KSM_NFT_Purchase 💰💰💰"
-                        elif nft_price >= 100:
-                            tweet_body += f"\n\n#Over100KSM_NFT_Purchase 💰💰💰💰"
+                        elif nft_price >= 25:
+                            tweet_body += f"\n\n#Over25KSM_NFT_Purchase 💰💰"
+                        elif nft_price >= 10:
+                            tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
 
         return tweet_body, nft_local_path
 
@@ -265,7 +282,7 @@ class ExtrinsicMonitor:
         block_event_construct = {"transactions": [], 'batch_all': []}
 
         calls = ['batch_all', 'remark', 'transfer']  # 12329404, 12341041
-        blockhash, extrinsics = self.extrinsic(block=block, extrinsic_types=calls, check_receipt=True)
+        blockhash, extrinsics = self.extrinsic(block=13487091, extrinsic_types=calls, check_receipt=True)
 
         print(f"{Style.DIM}🔨 New block: {Style.RESET_ALL}{Style.BRIGHT}{block}{Style.RESET_ALL} {Style.DIM}produced by: {Style.RESET_ALL}{Style.BRIGHT}{obj['author']}{Style.RESET_ALL}")
         print(f"{Style.DIM}Monitored extrinsics found in block: {Style.RESET_ALL}{Fore.LIGHTGREEN_EX}{len(extrinsics)}{Style.RESET_ALL}\n")
