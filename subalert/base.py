@@ -256,32 +256,6 @@ class CoinGecko:
             return 0
 
 
-class Tweet:
-    @staticmethod
-    def alert(message, filename=None, verbose=False):
-        try:
-            if verbose:
-                print(f"==== [ Tweepy input ] ======\n"
-                      f"{message}\n")
-
-            if filename:
-                media = config.api.media_upload(filename)
-                config.api.update_status(status=message, media_ids=[media.media_id])
-                print("🐤 tweet successfully sent!")
-                time.sleep(10)
-            else:
-                config.api.update_status(status=message)
-                print("🐤 tweet successfully sent!")
-                time.sleep(10)
-
-        except Exception as tweepy_err:
-            if tweepy_err == "[{'code': 187, 'message': 'Status is a duplicate.'}]":
-                print("Disregarding duplicate tweet")
-                pass
-            else:
-                print(f"Tweepy error: {tweepy_err}")
-
-
 class GitWatch:
     @staticmethod
     def latest_release():
