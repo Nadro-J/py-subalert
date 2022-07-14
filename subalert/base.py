@@ -70,6 +70,48 @@ class SubQuery:
 
         return self.short_address(address)
 
+    @staticmethod
+    def tips_info():
+        """
+        :return: A list of all proposed tips
+        """
+        tips_list = {}
+        result = substrate.query_map(
+            module='Tips',
+            storage_function='Tips',
+            params=None
+        )
+
+        for tip_hash, attributes in result.records:
+            tips_list.update({tip_hash.value: attributes.value})
+        return tips_list
+
+    @staticmethod
+    def tip_info(tip_hash):
+        """
+        :param tip_hash:
+        :return: Details of a specific proposed tip.
+        """
+        result = substrate.query(
+            module='Tips',
+            storage_function='Tips',
+            params=[tip_hash])
+
+        return result.serialize()
+
+    @staticmethod
+    def tip_reason(reason_hash):
+        """
+        :param reason_hash:
+        :return: Short description on why the tip was proposed.
+        """
+        result = substrate.query(
+            module='Tips',
+            storage_function='Reasons',
+            params=[reason_hash]
+        )
+        return result
+
 
 class Imagify:
     def __init__(self, title, text: str, footer: str):
