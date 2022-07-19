@@ -54,8 +54,8 @@ class TipsSubscription:
                         f"{reason}\n\n"
                         f"https://www.dotreasury.com/{self.ticker}/tips/{tip_hash}"
                     )
-
-                    queue.enqueue(tweet_body)
+                    tips_construct['tips'].append(tweet_body)
+                queue.enqueue(tips_construct)
             elif key == 'type_changes':
                 for tip_hash, attributes in result[key].items():
                     if 'closes' in tip_hash:
@@ -81,7 +81,7 @@ class TipsSubscription:
                             )
 
                             tips_construct['tips'].append(tweet_body)
-                            queue.enqueue(tweet_body)
+                queue.enqueue(tips_construct)
             else:
                 continue
 
@@ -89,6 +89,4 @@ class TipsSubscription:
             task = self.loop.create_task(queue.process_queue())
             self.loop.run_until_complete(task)
 
-
-
-            #self.utils.cache_data('data-cache/tips.cache', self.subquery.tips_info())
+        self.utils.cache_data('data-cache/tips.cache', self.subquery.tips_info())
