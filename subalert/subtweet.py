@@ -19,6 +19,7 @@ class Tweet:
         self.authorize.set_access_token(access_key, access_sec)
         self.api = tweepy.API(self.authorize, wait_on_rate_limit=True)
         self.supported_types = ['jpg', 'png', 'gif', 'webp', 'mp3', 'mp4']
+        self.client = tweepy.Client(consumer_key=consumer_key, consumer_secret=consumer_sec, access_token=access_key, access_token_secret=access_sec)
 
     def alert(self, message, filename=None, verbose=False):
         try:
@@ -30,11 +31,13 @@ class Tweet:
             # .jpg, .png, .gif, .mp3, .mp4
             if filename and filename.split('.')[1] in self.supported_types:
                 media = self.api.media_upload(filename)
-                self.api.update_status(status=message, media_ids=[media.media_id])
+                #self.api.update_status(status=message, media_ids=[media.media_id])
+                self.client.create_tweet(text=message, media_ids=[media.media_id], user_auth=True)
                 print("🐤 tweet successfully sent with media!")
                 time.sleep(5)
             else:
-                self.api.update_status(status=message)
+                #self.api.update_status(status=message)
+                self.client.create_tweet(text=message, user_auth=True)
                 print("🐤 tweet successfully sent!")
                 time.sleep(5)
 
