@@ -112,6 +112,28 @@ class SubQuery:
         )
         return result
 
+    @staticmethod
+    def era_total_stake():
+        """
+        :return: A list including the total stake over the last 84 eras.
+        """
+        result = substrate.query_map(
+            module='Staking',
+            storage_function='ErasTotalStake',
+            params=[])
+        return result
+
+    @staticmethod
+    def circulating_supply():
+        """
+        :return: Total issuance circulating the network
+        """
+        result = substrate.query(
+            module='Balances',
+            storage_function='TotalIssuance',
+            params=[]
+        )
+        return int(str(result))
 
 class Imagify:
     def __init__(self, title, text: str, footer: str):
