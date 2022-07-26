@@ -1,4 +1,6 @@
-from subalert.base import Tweet, Configuration, Numbers, CoinGecko
+from subalert.base import Numbers, CoinGecko, SubQuery
+from .subtweet import Tweet
+from .config import Configuration
 import matplotlib.pyplot as plt
 import matplotlib.image as image
 import matplotlib.cbook as cbook
@@ -8,32 +10,14 @@ import os.path
 class EraAnalysis:
     def __init__(self):
         self.config = Configuration()
+        self.subquery = SubQuery()
         self.substrate = self.config.substrate
+
         self.token_decimal = self.substrate.token_decimals
         self.hashtag = self.config.yaml_file['twitter']['hashtag']
         self.ticker = self.config.yaml_file['chain']['ticker']
         self.eras_per_day = self.config.yaml_file['chain']['eras']
 
-    def era_total_stake(self):
-        """
-        :return: A list including the total stake over the last 84 eras.
-        """
-        result = self.substrate.query_map(
-            module='Staking',
-            storage_function='ErasTotalStake',
-            params=[])
-        return result
-
-    def circulating_supply(self):
-        """
-        :return: Total issuance circulating the network
-        """
-        result = self.substrate.query(
-            module='Balances',
-            storage_function='TotalIssuance',
-            params=[]
-        )
-        return int(str(result))
 
     def era_84_graph(self):
         """
@@ -42,7 +26,7 @@ class EraAnalysis:
         era_data, eras, values = {}, [], []
 
         # Add data into era_data
-        for _era, _stake in self.era_total_stake():
+        for _era, _stake in self.subquery.era_total_stake():
             era_data.update({str(_era): str(_stake)})
 
         sort_orders = sorted(era_data.items(), key=lambda _era: _era[0], reverse=True)
@@ -65,13 +49,13 @@ class EraAnalysis:
         usd_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         current_stake = Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
         current_stake_usd = int(era_data[current_index]) / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
-        percentage_locked = int(era_data[current_index]) / self.circulating_supply()
+        percentage_locked = int(era_data[current_index]) / self.subquery.circulating_supply()
 
         # Change icon depending if more or less has been bonded.
         if era_difference < 0:
-            era_diff_text = f"In the last 24hrs, ⬇️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(abs(usd_difference)).human_format()}) were unbonded."
+            era_diff_text = f"Since I last checked 6hrs ago, ⬇️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(abs(usd_difference)).human_format()}) were unbonded."
         elif era_difference >= 0:
-            era_diff_text = f"In the last 24hrs, ⬆️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(usd_difference).human_format()}) were bonded."
+            era_diff_text = f"Since I last checked 6hrs ago, ⬆️{Numbers(abs(era_difference) / 10 ** self.substrate.token_decimals).human_format()} ${self.ticker} (${Numbers(usd_difference).human_format()}) were bonded."
 
         # Create graph using eras/values
         fig, ax = plt.subplots()
@@ -93,5 +77,4 @@ class EraAnalysis:
             f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
             f"{era_diff_text}")
 
-        Tweet().alert(filename='TotalStake84Eras.png', message=tweet_body, verbose=True)
-        self.substrate.close()
+        Tweet('KusamaStake').alert(message=tweet_body, filename='TotalStake84Eras.png')
