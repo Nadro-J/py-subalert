@@ -23,6 +23,9 @@ class Tweet:
 
     def alert(self, message, filename=None, verbose=False):
         try:
+            if message is None:
+                return "You can't send a blank tweet!"
+
             if verbose:
                 print(f"==== [ Tweepy input ] ======\n"
                       f"{message}\n")
