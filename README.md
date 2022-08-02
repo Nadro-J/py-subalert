@@ -10,7 +10,9 @@
 KSM address: `E5djM6u2p67C1LfkSyNDfRnvYwg6HAQxwPB8yK6Q5eAwdjn`  
 
 Kusama Bots
+- [RMRK Interactions](https://twitter.com/NonFungibleTxs)
 - [Kusama Transactions](https://twitter.com/KusamaTxs)
 - [Kusama Stake](https://twitter.com/KusamaStake)
-- [RMRK Interactions](https://twitter.com/NonFungibleTxs)
 - [Kusama Tips](https://twitter.com/KusamaTip)
+- [Kusama Democracy](https://twitter.com/KusamaDemocracy)
+- [Kusama Validators](https://twitter.com/KusamaValidator)
