@@ -135,6 +135,20 @@ class SubQuery:
         )
         return int(str(result))
 
+    @staticmethod
+    def referendum_info(index):
+        """
+        :param index: index of referendum
+        :return: Information regarding a specific referendum
+        """
+
+        # index - 1 since democracy referendum starts at zero
+        result = substrate.query(
+            module='Democracy',
+            storage_function='ReferendumInfoOf',
+            params=[index - 1])  # increase to go back; original: 1
+        return result.serialize()
+
 class Imagify:
     def __init__(self, title, text: str, footer: str):
         self.title = title
