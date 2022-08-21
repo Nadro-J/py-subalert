@@ -14,7 +14,6 @@ from pathlib import Path
 import uuid
 from .config import Configuration
 
-
 config = Configuration()
 hashtag = config.yaml_file['twitter']['hashtag']
 substrate = config.substrate
@@ -51,7 +50,7 @@ class SubQuery:
             params=[address]
         )
         result = result.value
-        #substrate.close()
+        # substrate.close()
 
         # return short address if result contains nothing
         if result is None:
@@ -136,18 +135,90 @@ class SubQuery:
         return int(str(result))
 
     @staticmethod
-    def referendum_info(index):
+    def referendum_info(index=None):
         """
         :param index: index of referendum
         :return: Information regarding a specific referendum
         """
+        referendum = {}
+        if index is not None:
+            # index - 1 since democracy referendum starts at zero
+            return substrate.query(
+                module='Democracy',
+                storage_function='ReferendumInfoOf',
+                params=[index]).serialize()  # increase to go back; original: 1
+        else:
+            qmap = substrate.query_map(
+                module='Democracy',
+                storage_function='ReferendumInfoOf',
+                params=[])  # increase to go back; original: 1
+            for index, info in qmap:
+                referendum.update({str(index): str(info)})
 
-        # index - 1 since democracy referendum starts at zero
+            return json.dumps({int(x): referendum[x] for x in referendum.keys()}, indent=4, sort_keys=True)
+
+    @staticmethod
+    def check_super_of(address):
+        """
+        :param address:
+        :return: The super-identity of an alternative 'sub' identity together with its name, within that
+        """
         result = substrate.query(
-            module='Democracy',
-            storage_function='ReferendumInfoOf',
-            params=[index - 1])  # increase to go back; original: 1
-        return result.serialize()
+            module='Identity',
+            storage_function='SuperOf',
+            params=[address])
+
+        if result.value is not None:
+            return result.value[0]
+        else:
+            return 0
+
+    def check_identity_depth(self, address):
+        """
+        :param address:
+        :return: Information that is pertinent to identify the entity behind an account.
+        """
+        result = substrate.query_map(
+            module='Identity',
+            storage_function='IdentityOf')
+
+        super_of = self.check_super_of(address)
+        if super_of:
+            address = super_of
+
+        for identity_address, information in result:
+            identification = ''
+
+            if address == identity_address.value:
+                for identity_type, values in information.value['info'].items():
+                    if 'display' in identity_type or 'twitter' in identity_type:
+                        for value_type, value in values.items():
+                            if identity_type == 'display' and value_type == 'Raw':
+                                identification += f"🆔 {value} "
+
+                            if identity_type == 'twitter' and value_type == 'Raw':
+                                identification += f"🐦 {value}"
+                return identification
+
+    @staticmethod
+    def get_current_commission():
+        """
+        :return: All validators & attributes returned as a list.
+        """
+        validators_list = {}
+        result = substrate.query_map(
+            module='Staking',
+            storage_function='Validators',
+            params=None
+        )
+
+        for validator_address, validator_attributes in result:
+            if validator_attributes is None:
+                continue
+            validators_list.update({validator_address.value: validator_attributes.value})
+
+        return validators_list
+
 
 class Imagify:
     def __init__(self, title, text: str, footer: str):
@@ -229,6 +300,20 @@ class Numbers:
 
 class Utils:
     @staticmethod
+    def check_collection(identifier):
+        """
+        :param identifier: pass 1 or more items in a list to conclude if it's a monitored collection.
+               Example: [collection_id, address]
+        :return: Check if an NFT collection is setup for monitoring
+                 Configurable via config.local.yaml
+        """
+        for collection in config.yaml_file['twitter']['collections']:
+            for uid in identifier:
+                if collection in uid:
+                    return collection
+            return False
+
+    @staticmethod
     def cache_data(filename, data):
         with open(f"{filename}", 'w') as cache:
             cache.write(json.dumps(data, indent=4))
@@ -294,27 +379,32 @@ class Public_API:
 
                 IPFS_data = self.connect()
                 if 'animation_url' in IPFS_data:
-                    NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
-                    self.url = NFT_image_URL # update URL with the one found in ['image']
+                    NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://',
+                                                                       'https://rmrk.mypinata.cloud/').replace(' ',
+                                                                                                               '%20')
+                    self.url = NFT_image_URL  # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
                 if 'image' in IPFS_data:
-                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
-                    self.url = NFT_image_URL # update URL with the one found in ['image']
+                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
+                                                                                                                  '%20')
+                    self.url = NFT_image_URL  # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
         elif rmrk_version == '2.0.0':
             if 'metadata' in IPFS_data[0].keys():
-                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
+                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
+                                                                                                               '%20')
                 self.url = metadata
 
-                print(f"1# - RMRK 2.0.0 Metadata: {metadata}") #log
+                print(f"1# - RMRK 2.0.0 Metadata: {metadata}")  # log
 
                 IPFS_data = self.connect()
 
                 if 'mediaUri' in IPFS_data:
-                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
-                    print(f"2# - RMRK 2.0.0 Metadata: {metadata}") #log
+                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
+                                                                                                                '%20')
+                    print(f"2# - RMRK 2.0.0 Metadata: {metadata}")  # log
                     self.url = metadata
                     return self.retrieve_image("NFT")
 
