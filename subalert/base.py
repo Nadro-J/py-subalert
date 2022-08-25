@@ -1,4 +1,7 @@
 import json
+import os
+import re
+from ast import literal_eval
 import uuid, random
 import socket
 import urllib.request
@@ -8,6 +11,7 @@ import time
 
 import tweepy
 import yaml
+import deepdiff
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from substrateinterface import SubstrateInterface
 from pathlib import Path
@@ -142,20 +146,25 @@ class SubQuery:
         """
         referendum = {}
         if index is not None:
-            # index - 1 since democracy referendum starts at zero
             return substrate.query(
                 module='Democracy',
                 storage_function='ReferendumInfoOf',
-                params=[index]).serialize()  # increase to go back; original: 1
+                params=[index]).serialize()
         else:
             qmap = substrate.query_map(
                 module='Democracy',
                 storage_function='ReferendumInfoOf',
-                params=[])  # increase to go back; original: 1
+                params=[])
             for index, info in qmap:
-                referendum.update({str(index): str(info)})
+                if 'Ongoing' in info:
+                    referendum.update({int(index.value): info.value})
 
-            return json.dumps({int(x): referendum[x] for x in referendum.keys()}, indent=4, sort_keys=True)
+            sort = json.dumps(referendum, sort_keys=True)
+            data = json.loads(sort)
+
+            return data
+            #return json.dumps(referendum)
+            #return json.loads(json.dumps({int(x): json.dumps(referendum[x], indent=4) for x in referendum.keys()}, indent=4, sort_keys=True))
 
     @staticmethod
     def check_super_of(address):
@@ -325,6 +334,23 @@ class Utils:
             cached_file = json.loads(cache.read())
             cache.close()
         return cached_file
+
+    def cache_difference(self, filename, data):
+        if not os.path.isfile(filename):
+            self.cache_data(filename, data)
+            print(f"data: {data}")
+            return False
+
+        cached_data = self.open_cache(filename)
+
+        # use DeepDiff to check if any values have changed since we ran has_commission_updated().
+        difference = deepdiff.DeepDiff(cached_data, data, ignore_order=True).to_json()
+        result = json.loads(difference)
+
+        if len(result) == 0:
+            return False
+        else:
+            return result
 
     @staticmethod
     def get_1kv_candidates():

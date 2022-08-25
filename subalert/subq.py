@@ -1,5 +1,8 @@
 from .subtweet import Tweet
+from .config import Configuration
 import os
+
+config = Configuration()
 
 
 class Queue:
@@ -28,23 +31,33 @@ class Queue:
         return self.items.clear()
 
     async def process_queue(self):
-        print("+++ process_queue called")
-        counter = 0
+        if 'validators' in self.items[0] and len(self.items[0]['validators']) >= 1 and self.items[0]['validators'][0] is not None:
+            for validator in self.items[0]['validators']:
+                Tweet("KusamaValidator").alert(message=validator, verbose=True)
+
+        if 'proposals' in self.items[0] and len(self.items[0]['proposals']) >= 1 and self.items[0]['proposals'][0] is not None:
+            for proposal in self.items[0]['proposals']:
+                Tweet('KusamaDemocracy').alert(message=proposal)
 
         if 'tips' in self.items[0] and len(self.items[0]['tips']) >= 1 and self.items[0]['tips'][0] is not None:
             for tip in self.items[0]['tips']:
-                counter += 1
-                print(f"##[ Tip ({counter}) ]###\n{tip}")
                 Tweet("KusamaTip").alert(message=tip, verbose=True)
 
         if 'batch_all' in self.items[0] and len(self.items[0]['batch_all']) >= 1 and self.items[0]['batch_all'][0] is not None:
-            for tweet, media in self.items[0]['batch_all']:
+            for tweet, media, collection_id in self.items[0]['batch_all']:
                 if not tweet:
                     pass
 
-                counter += 1
-                print(f"\n##[ batch_all ({counter}) ]###\n{tweet}\n{media}\n------\n")
                 Tweet("NonFungibleTxs").alert(message=tweet, filename=media, verbose=True)
+
+                # Handle monitored collections
+                # ----------------------------
+                # If collection_id returns anything, fetch the account from the yaml
+                # config and tweet the result.
+                if collection_id:
+                    monitored_collection = config.yaml_file['twitter']['collections'][collection_id]
+                    account = list(monitored_collection.keys())[0]
+                    Tweet(account, nft_collection=collection_id).alert(message=tweet, filename=media, verbose=True)
 
                 # only remove media if it actually returns anything.
                 if media:
@@ -55,6 +68,4 @@ class Queue:
                 if not tx:
                     pass
 
-                counter += 1
-                print(f"##[ transaction ({counter}) ]###\n{tx}")
                 Tweet("KusamaTxs").alert(message=tx, verbose=True)
