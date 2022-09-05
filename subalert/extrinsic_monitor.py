@@ -1,22 +1,22 @@
 import asyncio
-import json
 import urllib.parse
 import urllib.request
 
 from colorama import Fore, Style
-from subalert.base import Numbers, SubQuery, CoinGecko, Public_API
+from subalert.base import Numbers, Utils, SubQuery, CoinGecko, Public_API
 from substrateinterface import ExtrinsicReceipt
 
 from .config import Configuration
 from .subq import Queue
 
 queue = Queue()
+utils = Utils()
 
 
 class ProcessExtrinsicData:
     def __init__(self, data):
         self.data = data
-        self.queue = Queue()
+        # self.queue = Queue()
         self.subquery = SubQuery()
         self.config = Configuration()
         self.substrate = self.config.substrate
@@ -121,6 +121,8 @@ class ProcessExtrinsicData:
                 if len(value) > 0:
                     # quote nft_id using urllib to mitigate issues where people include emojis in the ID.
                     nft_id = urllib.parse.quote(value['nft'])
+                    monitored = utils.check_collection([nft_id, value['nft-creator']])
+
                     if value['version'] == '1.0.0':
                         direct_link = f"https://singular.rmrk.app/collectibles/{nft_id}"
                         nft_local_path = (Public_API(
@@ -157,7 +159,7 @@ class ProcessExtrinsicData:
                         elif nft_price >= 10:
                             tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
 
-        return tweet_body, nft_local_path
+        return tweet_body, nft_local_path, monitored
 
     @property
     def transactions(self):
@@ -235,6 +237,7 @@ class ExtrinsicMonitor:
     def __init__(self):
         self.config = Configuration()
         self.subquery = SubQuery()
+        self.previous_hash = []
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
         self.whale_threshold = self.config.yaml_file['alert']['whale_threshold']
         self.ticker = self.config.yaml_file['chain']['ticker']
@@ -278,35 +281,46 @@ class ExtrinsicMonitor:
         :return: When a new block occurs, it is checked against check_transaction to see if the amount transacted is
                  greater than the threshold set.
         """
-        block = obj['header']['number']
+        block = obj['header']['number'] - 50  # 50 blocks behind
+        bhash = obj['header']['parentHash']
+
         block_event_construct = {"transactions": [], 'batch_all': []}
+        calls = ['batch_all', 'remark', 'transfer']
 
-        calls = ['batch_all', 'remark', 'transfer']  # 12329404, 12341041
-        blockhash, extrinsics = self.extrinsic(block=13487091, extrinsic_types=calls, check_receipt=True)
+        # check current hash and previous hash to mitigate
+        # duplicate blocks whilst subscribed
+        if bhash not in self.previous_hash:
+            if len(self.previous_hash) >= 1:
+                self.previous_hash.pop(len(self.previous_hash) - 1)
+            self.previous_hash.append(bhash)
 
-        print(f"{Style.DIM}🔨 New block: {Style.RESET_ALL}{Style.BRIGHT}{block}{Style.RESET_ALL} {Style.DIM}produced by: {Style.RESET_ALL}{Style.BRIGHT}{obj['author']}{Style.RESET_ALL}")
-        print(f"{Style.DIM}Monitored extrinsics found in block: {Style.RESET_ALL}{Fore.LIGHTGREEN_EX}{len(extrinsics)}{Style.RESET_ALL}\n")
+            blockhash, extrinsics = self.extrinsic(block=block, extrinsic_types=calls, check_receipt=True)
 
-        for extrinsic in extrinsics:
-            if extrinsic is not None:
-                call_type = extrinsic['call']['call_function']
-                extrinsic_data = ProcessExtrinsicData(extrinsic)
+            print(f"{Style.DIM}🔨 New block: {Style.RESET_ALL}{Style.BRIGHT}{block}{Style.RESET_ALL} {Style.DIM}produced by: {Style.RESET_ALL}{Style.BRIGHT}{obj['author']}{Style.RESET_ALL}")
+            print(f"{Style.DIM}Monitored extrinsics found in block: {Style.RESET_ALL}{Fore.LIGHTGREEN_EX}{len(extrinsics)}{Style.RESET_ALL}\n")
 
-                if call_type == 'transfer':
-                    transaction = extrinsic_data.transactions
-                    block_event_construct['transactions'].append(transaction)
+            for extrinsic in extrinsics:
+                if extrinsic is not None:
+                    call_type = extrinsic['call']['call_function']
+                    extrinsic_data = ProcessExtrinsicData(extrinsic)
 
-                elif call_type == 'batch_all':
-                    batch_all = extrinsic_data.remark_batch_all
-                    block_event_construct['batch_all'].append(batch_all)
+                    if call_type == 'transfer':
+                        transaction = extrinsic_data.transactions
+                        block_event_construct['transactions'].append(transaction)
 
-        queue.enqueue(block_event_construct)
+                    elif call_type == 'batch_all':
+                        batch_all = extrinsic_data.remark_batch_all
+                        block_event_construct['batch_all'].append(batch_all)
 
-        # Run queue task if size is >= 1, clear queue & block_event_construct once complete.
-        if queue.size() >= 1:
-            task = self.loop.create_task(queue.process_queue())
-            self.loop.run_until_complete(task)
+            queue.enqueue(block_event_construct)
 
-        queue.clear()
-        block_event_construct.clear()
+            # Run queue task if size is >= 1, clear queue & block_event_construct once complete.
+            if queue.size() >= 1:
+                task = self.loop.create_task(queue.process_queue())
+                self.loop.run_until_complete(task)
 
+            queue.clear()
+            block_event_construct.clear()
+
+        else:
+            pass
