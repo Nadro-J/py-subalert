@@ -44,7 +44,7 @@ class EraAnalysis:
         era_diff_text = ""
         total_eras = len(eras) - 1
         current_index = eras[total_eras]
-        previous_index = eras[total_eras - self.eras_per_day]
+        previous_index = eras[total_eras - 1]
         era_difference = int(era_data[current_index]) - int(era_data[previous_index])
         usd_difference = era_difference / 10 ** self.substrate.token_decimals * float(price.replace('$', ''))
         current_stake = Numbers(int(era_data[current_index]) / 10 ** self.substrate.token_decimals).human_format()
@@ -75,6 +75,6 @@ class EraAnalysis:
         tweet_body = (
             f"There are currently {current_stake} ${self.ticker} "
             f"(${Numbers(current_stake_usd).human_format()} - {percentage_locked:.2%}) locked on the network.\n\n"
-            f"{era_diff_text}")
+            f"{era_diff_text}\n#{self.hashtag}")
 
         Tweet('KusamaStake').alert(message=tweet_body, filename='TotalStake84Eras.png')
