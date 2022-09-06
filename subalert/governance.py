@@ -90,12 +90,11 @@ class Governance:
                              f"https://{self.hashtag.lower()}.polkassembly.io/referendum/{index}")
                     proposal_construct['proposals'].append(tweet)
 
-                elif 'new_proposal' in items:
-                    print(index, items)
+                if 'new_proposal' in items:
                     end = items['Ongoing']['end']
                     hash = items['Ongoing']['proposal_hash']
                     threshold = items['Ongoing']['threshold']
-                    turnout = items['Ongoing']['tally'][changed_key] / 10 ** self.substrate.token_decimals
+                    turnout = items['Ongoing']['tally']['turnout'] / 10 ** self.substrate.token_decimals
                     ayes = items['Ongoing']['tally']['ayes'] / 10 ** self.substrate.token_decimals
                     nays = items['Ongoing']['tally']['nays'] / 10 ** self.substrate.token_decimals
 
