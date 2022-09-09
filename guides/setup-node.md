@@ -38,13 +38,14 @@ Run `./target/release/polkadot --help` for more information
 ```shell
 ./target/release/polkadot --name "<NODE-NAME>" --chain kusama --blocks-pruning 103000 --state-pruning 103000 --rpc-cors all
 ```
+---
 
-
-Set up a certificate
+Set up a self-signed certificate
 =
 ```shell
 sudo openssl req -x509 -nodes -days 1095 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
 ```
+---
 
 Set up Nginx server
 =
@@ -64,8 +65,10 @@ CERT_DHPARAM should be /etc/letsencrypt/ssl-dhparams.pem if you used Certbot,
         and /etc/ssl/certs/dhparam.pem if self-signed.
 ```
 
-
-nano `/etc/nginx/sites-available/kusama`
+Create nginx config:
+```shell
+nano /etc/nginx/sites-available/kusama
+```
 
 ```
 server {
@@ -118,7 +121,7 @@ Run the following command to see errors in detail if `systemctl status`  is not 
 ```shell
 journalctl -xe
 ```
-
+---
 Daemonize with systemd
 =
 ```shell
