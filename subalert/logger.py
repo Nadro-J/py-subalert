@@ -1,8 +1,13 @@
+import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 
 class log_events:
     def __init__(self, filename, debug=False):
+
+        if not os.path.exists('./logs'):
+            os.makedirs(name='./logs')
 
         if debug:
             logging.getLogger().setLevel(logging.DEBUG)
@@ -12,7 +17,7 @@ class log_events:
         logging.basicConfig(
             format='%(asctime)s %(levelname)s %(message)s',
             handlers=[
-                logging.FileHandler(filename),
+                TimedRotatingFileHandler(filename='./logs/'+filename, when='D', interval=1, backupCount=7),
                 logging.StreamHandler()
             ],
             datefmt='%m/%d/%Y %I:%M:%S %p')
