@@ -1,12 +1,10 @@
 import asyncio
-import urllib.parse
-import urllib.request
 
-from colorama import Fore, Style
-from subalert.base import Numbers, Utils, SubQuery, CoinGecko, Public_API
+from subalert.base import Utils
 from subalert.logger import log_events
-from substrateinterface import ExtrinsicReceipt
 from subalert.extrinsic_parser import ParseExtrinsic
+from substrateinterface import ExtrinsicReceipt
+
 from .config import Configuration
 from .subq import Queue
 
@@ -25,6 +23,7 @@ class ExtrinsicMonitor:
         self.loop = asyncio.get_event_loop()
 
     def extrinsic(self, block, extrinsic_types, check_receipt):
+        log.info(f"Checking if monitored extrinsic has been signed successfully")
         result = self.substrate.get_block(block_number=block, ignore_decoding_errors=True)
         block_hash, extrinsics_list = result['header']['hash'], []
 
@@ -47,7 +46,6 @@ class ExtrinsicMonitor:
 
                     extrinsics_list.append(extrinsic.value)
 
-        self.substrate.websocket.ping()
         return block_hash, extrinsics_list
 
     def new_block(self, obj, update_nr, subscription_id):
@@ -71,10 +69,9 @@ class ExtrinsicMonitor:
                 self.previous_hash.pop(len(self.previous_hash) - 1)
             self.previous_hash.append(bhash)
 
+            log.info(f"🔨 New block: {block} produced by: {obj['author']}")
             blockhash, extrinsics = self.extrinsic(block=block, extrinsic_types=calls, check_receipt=True)
-
-            print(f"{Style.DIM}🔨 New block: {Style.RESET_ALL}{Style.BRIGHT}{block}{Style.RESET_ALL} {Style.DIM}produced by: {Style.RESET_ALL}{Style.BRIGHT}{obj['author']}{Style.RESET_ALL}")
-            print(f"{Style.DIM}Monitored extrinsics found in block: {Style.RESET_ALL}{Fore.LIGHTGREEN_EX}{len(extrinsics)}{Style.RESET_ALL}\n")
+            log.info(f"Monitored extrinsics found: {len(extrinsics)}")
 
             for extrinsic in extrinsics:
                 if extrinsic is not None:

@@ -1,8 +1,12 @@
 import urllib.parse
 import urllib.request
 
-from subalert.base import Numbers, SubQuery, CoinGecko, Public_API
+from subalert.base import Numbers, SubQuery, CoinGecko, Public_API, Utils
+from subalert.logger import log_events
 from .config import Configuration
+
+utils = Utils()
+log = log_events(filename='extrinsic-monitor.log', debug=False)
 
 
 class ParseExtrinsic:
