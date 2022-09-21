@@ -5,7 +5,15 @@ from logging.handlers import TimedRotatingFileHandler
 
 class log_events:
     def __init__(self, filename, debug=False):
+        """
+        A class used to log events.
+        Call log_events() below Python imports with debug=True to capture
 
+        Parameters
+        -------------
+        :param filename:
+        :param debug:
+        """
         if not os.path.exists('./logs'):
             os.makedirs(name='./logs')
 
@@ -15,7 +23,7 @@ class log_events:
             logging.getLogger().setLevel(logging.INFO)
 
         logging.basicConfig(
-            format='%(asctime)s %(levelname)s %(message)s',
+            format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
                 TimedRotatingFileHandler(filename='./logs/'+filename, when='D', interval=1, backupCount=7),
                 logging.StreamHandler()
@@ -39,5 +47,5 @@ class log_events:
         logging.critical(msg=message)
 
     @staticmethod
-    def warning(message):
-        logging.exception(msg=message)
+    def info(message):
+        logging.info(msg=message)

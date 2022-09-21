@@ -24,12 +24,13 @@ class ParseExtrinsic:
 
     @property
     def remark_batch_all(self):
-        print("\033[0;34;40m========== [ (remark) batch_all ] ========== \033[0m")
+        log.info("Running remark_batch_all() from extrinsic_parser")
         batch_author = self.data['address']
         nft_local_path = ''
         remark_call_data = {batch_author: {}}
         rmrk_events = ["BUY"]
         tweet_body = None
+        monitored = False
 
         for batch_calls in self.data["call"]['call_args']:
             call_counter = 0
@@ -38,11 +39,13 @@ class ParseExtrinsic:
                 call_function = batch_call['call_function']
                 call_module = batch_call['call_module']
                 call_counter += 1
-                print(f"\033[1;34;40m    ====== [ call: {call_counter} ] =========\033[0m")
-                print(f"    * call_function: {call_function}")
-                print(f"    * call_module: {call_module}")
-                print(f"    * total_args: {len(batch_call['call_args'])}")
-                print(f"    * batch_call_data: \033[0;33;40m{batch_call}\033[0m\n")
+                log.debug(f"""
+                Call: #{call_counter}\n
+                Call_function: {call_function}\n
+                Call_module: {call_module}\n
+                Total_args: {len(batch_call['call_args'])}\n
+                Batch_call_data: {batch_call}
+                """)
 
                 for call in batch_call["call_args"]:
                     # If the first call in batch_all isn't remark, then disregard.
@@ -116,7 +119,9 @@ class ParseExtrinsic:
                 if len(value) > 0:
                     # quote nft_id using urllib to mitigate issues where people include emojis in the ID.
                     nft_id = urllib.parse.quote(value['nft'])
-                    monitored = utils.check_collection([nft_id, value['nft-creator']])
+
+                    if 'nft-creator' in value:
+                        monitored = utils.check_collection([nft_id, value['nft-creator']])
 
                     if value['version'] == '1.0.0':
                         direct_link = f"https://singular.rmrk.app/collectibles/{nft_id}"
@@ -153,12 +158,12 @@ class ParseExtrinsic:
                             tweet_body += f"\n\n#Over25KSM_NFT_Purchase 💰💰"
                         elif nft_price >= 10:
                             tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
-
-        return tweet_body, nft_local_path, monitored
+                log.info(f"RMRK batch_all parsed to read-able format")
+                return tweet_body, nft_local_path, monitored
 
     @property
     def transactions(self):
-        print("checking for transactions")
+        log.info("Running transactions() from extrinsic_parser")
         """
         :param block_height:
         :param threshold: >= the amount to alert on
@@ -224,5 +229,5 @@ class ParseExtrinsic:
                         f"🏦 Receiver balance: {Numbers(destination_balance).human_format()} (${Numbers(usd_destination_balance).human_format()}) {r_whale_emoji}{r_whale_emoji}\n"
                         f"🔒 Locked: {Numbers(destination_locked).human_format()} (${Numbers(usd_destination_locked).human_format()})\n\n"
                         f"https://{self.hashtag.lower()}.subscan.io/account/{destination}")
-
+                log.info(f"Transaction parsed to read-able format")
                 return tweet_body

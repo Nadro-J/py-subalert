@@ -23,7 +23,6 @@ class ExtrinsicMonitor:
         self.loop = asyncio.get_event_loop()
 
     def extrinsic(self, block, extrinsic_types, check_receipt):
-        log.info(f"Checking if monitored extrinsic has been signed successfully")
         result = self.substrate.get_block(block_number=block, ignore_decoding_errors=True)
         block_hash, extrinsics_list = result['header']['hash'], []
 
@@ -34,6 +33,7 @@ class ExtrinsicMonitor:
                 continue
 
             if extrinsic['call']['call_function']['name'] in extrinsic_types:
+                log.info(f"Checking if extrinsic: {extrinsic_hash} has been signed")
                 if check_receipt:
                     extrinsic_receipt = ExtrinsicReceipt(
                         substrate=self.substrate,
@@ -45,7 +45,7 @@ class ExtrinsicMonitor:
                         continue
 
                     extrinsics_list.append(extrinsic.value)
-
+        log.info(f"{len(extrinsics_list)} extrinsic(s) were successfully signed")
         return block_hash, extrinsics_list
 
     def new_block(self, obj, update_nr, subscription_id):
@@ -84,7 +84,8 @@ class ExtrinsicMonitor:
 
                     elif call_type == 'batch_all':
                         batch_all = extrinsic_data.remark_batch_all
-                        block_event_construct['batch_all'].append(batch_all)
+                        if batch_all:
+                            block_event_construct['batch_all'].append(batch_all)
 
             queue.enqueue(block_event_construct)
 
