@@ -320,7 +320,7 @@ class Utils:
             for uid in identifier:
                 if collection in uid:
                     return collection
-            return False
+        return False
 
     @staticmethod
     def cache_data(filename, data):
@@ -338,7 +338,6 @@ class Utils:
     def cache_difference(self, filename, data):
         if not os.path.isfile(filename):
             self.cache_data(filename, data)
-            print(f"data: {data}")
             return False
 
         cached_data = self.open_cache(filename)
@@ -398,6 +397,9 @@ class Public_API:
     def IPFS_RMRK(self, rmrk_version):
         IPFS_data = self.connect()
 
+        if not IPFS_data:
+            return False
+
         if rmrk_version == '1.0.0':
             if 'metadata' in IPFS_data[0].keys():
                 metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/')
@@ -406,31 +408,23 @@ class Public_API:
                 IPFS_data = self.connect()
                 if 'animation_url' in IPFS_data:
                     NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://',
-                                                                       'https://rmrk.mypinata.cloud/').replace(' ',
-                                                                                                               '%20')
+                                                                       'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL  # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
                 if 'image' in IPFS_data:
-                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
-                                                                                                                  '%20')
+                    NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL  # update URL with the one found in ['image']
                     return self.retrieve_image("NFT")
 
         elif rmrk_version == '2.0.0':
             if 'metadata' in IPFS_data[0].keys():
-                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
-                                                                                                               '%20')
+                metadata = IPFS_data[0]['metadata'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                 self.url = metadata
-
-                print(f"1# - RMRK 2.0.0 Metadata: {metadata}")  # log
-
                 IPFS_data = self.connect()
 
                 if 'mediaUri' in IPFS_data:
-                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ',
-                                                                                                                '%20')
-                    print(f"2# - RMRK 2.0.0 Metadata: {metadata}")  # log
+                    metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = metadata
                     return self.retrieve_image("NFT")
 
