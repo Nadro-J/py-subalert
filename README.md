@@ -8,11 +8,6 @@
 ### On-chain analytics delivered from substrate node to Twitter.
 
 ---
-**KSM address:** `E5djM6u2p67C1LfkSyNDfRnvYwg6HAQxwPB8yK6Q5eAwdjn`  
-**Objective:** 48.19/100 KSM  
-Once 100 KSM has been reached, rewards will no longer compound and will go towards server upkeep with room to expand capacity should it be required.
-
-Server costs per month: $25
 
 ---
 ### **Current phase:** `Phase 1. B`
