@@ -2,6 +2,11 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from pathlib import Path
+
+file = Path(__file__).resolve()
+package_root_directory = file.parents[1]
+
 
 class log_events:
     def __init__(self, filename, debug=False):
@@ -14,8 +19,8 @@ class log_events:
         :param filename:
         :param debug:
         """
-        if not os.path.exists('./logs'):
-            os.makedirs(name='./logs')
+        if not os.path.exists(f'{package_root_directory}/logs'):
+            os.makedirs(name=f'{package_root_directory}/logs')
 
         if debug:
             logging.getLogger().setLevel(logging.DEBUG)
@@ -25,7 +30,7 @@ class log_events:
         logging.basicConfig(
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
-                TimedRotatingFileHandler(filename='./logs/'+filename, when='D', interval=1, backupCount=7),
+                TimedRotatingFileHandler(filename=f'{package_root_directory}/logs/'+filename, when='D', interval=1, backupCount=7),
                 logging.StreamHandler()
             ],
             datefmt='%m/%d/%Y %I:%M:%S %p')
