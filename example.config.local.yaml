@@ -1,21 +1,104 @@
 twitter:
-  hashtag: Kusama
-  OAuthHandler:
-    consumer_key:
-    consumer_secret:
-  access_token:
-    key:
-    secret:
+  hashtag: <value>
+  sub_twitter:
+    NonFungibleTxs:
+      hashtag: <value>
+      discord_webhook: <value>
+      discord_api:
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+    KusamaTxs:
+      hashtag: <value>
+      discord_webhook: <value>
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+    KusamaTip:
+      hashtag: <value>
+      discord_webhook: <value>
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+    KusamaStake:
+      hashtag: <value>
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+    KusamaDemocracy:
+      hashtag: Kusama
+      discord_webhook: <value>
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+    KusamaValidator:
+      hashtag: <value>
+      discord_webhook: <value>
+      OAuthHandler:
+        consumer_key: <value>
+        consumer_secret: <value>
+      access_token:
+        key: <value>
+        secret: <value>
+  collections:
+    # Monitor collection(s) using collection identifier
+    dac5c7f54029d0e73c-6AFVH:
+      AXC_Sales:
+        hashtag: <value>
+        discord_webhook: <value>
+        OAuthHandler:
+          consumer_key: <value>
+          consumer_secret: <value>
+        access_token:
+          key: <value>
+          secret: <value>
+    # Monitor address(s) set as royalties
+    HXAi8NoJHQUU1FQUJrHYGtAECN1upNKgPPnJMj7er1eFRK8:
+      AXC_Sales:
+        hashtag: <value>
+        discord_webhook: <value>
+        OAuthHandler:
+          consumer_key: <value>
+          consumer_secret: <value>
+        access_token:
+          key: <value>
+          secret: <value>
+    Dp27W3mGpkT7BG9SxNsTtWoKcvJSwzF4BU8tadYirkn6Kwx:
+      Youdle_Sales:
+        hashtag: <value>
+        discord_webhook: <value>
+        OAuthHandler:
+          consumer_key: <value>
+          consumer_secret: <value>
+        access_token:
+          key: <value>
+          secret: <value>
 chain:
-  url: wss://kusama-rpc.polkadot.io/
+  url: ws://127.0.0.1:9944
   ss58_format: 2
   type_registry_preset: kusama
   ticker: KSM
   eras: 4
 alert:
-  transact_usd_threshold: 200000
+  transact_usd_threshold: 10000
   whale_threshold: 250000
-  validator_change: 10
+  validator_change: 0
+  nft_threshold: 0.01
 github:
   repository: https://api.github.com/repos/paritytech/polkadot/releases/latest
 validator_programme_url: https://kusama.w3f.community/candidates
