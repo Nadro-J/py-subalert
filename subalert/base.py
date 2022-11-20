@@ -266,17 +266,17 @@ class Imagify:
             modified_image_draw = ImageDraw.Draw(modified_image)
 
         elif text_w > title_w or text_w > footer_w:
-            modified_image = new_image.resize(size=(text_w + 75, text_h + 95))
+            modified_image = new_image.resize(size=(text_w + 140, text_h + 95))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
         elif footer_w > title_w or title_w < footer_w:
             modified_image = new_image.resize(size=(footer_w + 90, text_h + 95))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        modified_image.paste(new_watermark, (10, 0), mask=new_watermark)
+        modified_image.paste(new_watermark, (5, 0), mask=new_watermark)
 
         # title
-        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#BA97B3', font=title_font)
+        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 14), text=self.title, fill='#BA97B3', font=title_font)
 
         # text
         modified_image_draw.text(xy=(10, 65), text=self.text, fill='#BAACAC', font=text_font)
@@ -356,7 +356,7 @@ class Utils:
             self.cache_data(f"{package_root_directory}/{filename}", data)
             return False
 
-        cached_data = self.open_cache(f"{package_root_directory}/{filename}")
+        cached_data = self.open_cache(f"{filename}")
 
         # use DeepDiff to check if any values have changed since we ran has_commission_updated().
         difference = deepdiff.DeepDiff(cached_data, data, ignore_order=True).to_json()
