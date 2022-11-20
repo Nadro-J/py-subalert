@@ -9,6 +9,10 @@ from .config import Configuration
 utils = Utils()
 log = log_events(filename='extrinsic-monitor.log', debug=False)
 
+from pathlib import Path
+
+file = Path(__file__).resolve()
+package_root_directory = file.parents[1]
 
 class ParseExtrinsic:
     def __init__(self, data):
@@ -157,7 +161,7 @@ class ParseExtrinsic:
                     log.info(f"RMRK batch_all parsed to read-able format")
 
                     # Check if hourly-rmrk-sales.json exists
-                    if not os.path.isfile('data-cache/hourly-rmrk-sales.json'):
+                    if not os.path.isfile(f'{package_root_directory}/data-cache/hourly-rmrk-sales.json'):
                         self.utils.cache_data('data-cache/hourly-rmrk-sales.json', [remark_call_data])
 
                     hourly_sales = utils.open_cache('data-cache/hourly-rmrk-sales.json')
