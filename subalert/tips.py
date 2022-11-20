@@ -4,7 +4,7 @@ import statistics
 import asyncio
 import deepdiff
 
-from subalert.base import  Utils, SubQuery
+from subalert.base import Utils, SubQuery
 
 from .config import Configuration
 from .subq import Queue
