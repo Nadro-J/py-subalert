@@ -1,3 +1,4 @@
+import os
 import urllib.parse
 import urllib.request
 
@@ -14,6 +15,7 @@ class ParseExtrinsic:
         self.data = data
         self.subquery = SubQuery()
         self.config = Configuration()
+        self.utils = Utils()
         self.substrate = self.config.substrate
 
         self.threshold = self.config.yaml_file['alert']['transact_usd_threshold']
@@ -119,9 +121,11 @@ class ParseExtrinsic:
                 if len(value) > 0:
                     # quote nft_id using urllib to mitigate issues where people include emojis in the ID.
                     nft_id = urllib.parse.quote(value['nft'])
+                    split_nft_id = nft_id.split('-')
+                    collection_id = f"{split_nft_id[1]}-{split_nft_id[2]}"
 
                     if 'nft-creator' in value:
-                        monitored = utils.check_collection([nft_id, value['nft-creator']])
+                        monitored = utils.check_collection([collection_id, value['nft-creator']])
 
                     if value['version'] == '1.0.0':
                         direct_link = f"https://singular.rmrk.app/collectibles/{nft_id}"
@@ -150,16 +154,17 @@ class ParseExtrinsic:
                             nft_fee = float("{:.4f}".format(value['platform-fees']))
                             tweet_body += f"\n🛒 Platform fee: {self.subquery.check_identity(value['platform-address'])} (Fee: {nft_fee} $KSM)\n\n{direct_link}"
 
-                        if nft_price >= 100:
-                            tweet_body += f"\n\n#Over100KSM_NFT_Purchase 💰💰💰💰"
-                        elif nft_price >= 50:
-                            tweet_body += f"\n\n#Over50KSM_NFT_Purchase 💰💰💰"
-                        elif nft_price >= 25:
-                            tweet_body += f"\n\n#Over25KSM_NFT_Purchase 💰💰"
-                        elif nft_price >= 10:
-                            tweet_body += f"\n\n#Over10KSM_NFT_Purchase 💰"
-                log.info(f"RMRK batch_all parsed to read-able format")
-                return tweet_body, nft_local_path, monitored
+                    log.info(f"RMRK batch_all parsed to read-able format")
+
+                    # Check if hourly-rmrk-sales.json exists
+                    if not os.path.isfile('data-cache/hourly-rmrk-sales.json'):
+                        self.utils.cache_data('data-cache/hourly-rmrk-sales.json', [remark_call_data])
+
+                    hourly_sales = utils.open_cache('data-cache/hourly-rmrk-sales.json')
+                    hourly_sales.append(remark_call_data)
+                    self.utils.cache_data('data-cache/hourly-rmrk-sales.json', hourly_sales)
+
+                    return tweet_body, nft_local_path, monitored, remark_call_data, direct_link
 
     @property
     def transactions(self):
