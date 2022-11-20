@@ -57,6 +57,6 @@ if len(hourly_nft_data) > 0:
             continue
         table.add(data=json_record)
 
-    filename = Imagify(title=f"RMRK sales", text=str(table.sales()), footer=f"hourly sales").create()
+    filename = Imagify(title=f"Sales", text=str(table.sales()), footer=f"hourly sales").create()
     Tweet(account='NonFungibleTxs').alert(message='#RMRK sale(s) caught in the last hour.', filename=filename)
     Utils.cache_data('data-cache/hourly-rmrk-sales.json', [])
