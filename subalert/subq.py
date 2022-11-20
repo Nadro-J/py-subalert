@@ -62,7 +62,6 @@ class Queue:
         if 'batch_all' in self.items[0] and len(self.items[0]['batch_all']) >= 1 and self.items[0]['batch_all'][0] is not None:
             webhook = DiscordWebhook(url=f"{config.yaml_file['twitter']['sub_twitter']['NonFungibleTxs']['discord_webhook']}")
             for tweet, media, collection_id, raw_json, link in self.items[0]['batch_all']:
-
                 if media:
                     with open(media, "rb") as f:
                         webhook.add_file(file=f.read(), filename='example.jpg')
@@ -72,38 +71,50 @@ class Queue:
                 if not tweet:
                     continue
 
-                Tweet("NonFungibleTxs").alert(message=tweet, filename=media, verbose=True)
                 embed = DiscordEmbed(title='RMRK interaction', color='03b2f8')
                 embed.set_thumbnail(url="attachment://example.jpg")
 
                 for author, value in raw_json.items():
-                    embed.add_embed_field(name='Buyer', value=self.subquery.check_identity(address=author), inline=True)
+                    author = self.subquery.check_identity(address=author)
+                    lister = self.subquery.check_identity(address=value['lister'])
+
+                    embed.add_embed_field(name='Buyer',
+                                          value=f"[{author}](https://twitter.com/{author})" if '@' in author else author,
+                                          inline=True)
                     if 'lister' in value:
-                        embed.add_embed_field(name='Seller', value=self.subquery.check_identity(address=value['lister']), inline=True)
+                        embed.add_embed_field(name='Seller',
+                                              value=f"[{lister}](https://twitter.com/{lister})" if '@' in lister else lister,
+                                              inline=True)
 
-                    embed.add_embed_field(name="\u200b", value=f"[:art: singular.app]({link})", inline=True)
+                    embed.add_embed_field(name="\u200b",
+                                          value=f"[:art: singular.app]({link})",
+                                          inline=True)
+
+                    if 'nft-creator-royalties' in value:
+                        embed.add_embed_field(name='Royalties',
+                                              value=f"{value['nft-creator-royalties']} KSM",
+                                              inline=True)
+
+                    embed.add_embed_field(name='Received',
+                                          value=f"{value['nft-price']} KSM",
+                                          inline=True)
 
                     if 'platform-fees' in value:
-                        embed.add_embed_field(name='Royalties', value=f"{value['nft-creator-royalties']} KSM", inline=True)
+                        embed.add_embed_field(name='Platform fees',
+                                              value=f"{value['platform-fees']} KSM",
+                                              inline=True)
 
-                    embed.add_embed_field(name='Received', value=f"{value['nft-price']} KSM", inline=True)
-
-                    if 'platform-fees' in value:
-                        embed.add_embed_field(name='Platform fees', value=f"{value['platform-fees']} KSM", inline=True)
                 embed.set_timestamp(timestamp=int(time.time()))
                 embed.set_footer(text='https://kusamahub.com', icon_url='https://i.imgur.com/IR7ZHk5.jpg')
 
                 webhook.add_embed(embed)
                 webhook.execute()
 
-                # Handle monitored collections
-                # ----------------------------
-                # If collection_id returns anything, fetch the account from the yaml
-                # config and tweet the result.
                 if collection_id:
                     monitored_collection = config.yaml_file['twitter']['collections'][collection_id]
                     account = list(monitored_collection.keys())[0]
                     webhook = DiscordWebhook(url=f"{monitored_collection[account]['discord_webhook']}")
+
                     if media:
                         with open(media, "rb") as f:
                             webhook.add_file(file=f.read(), filename='example.jpg')
@@ -113,23 +124,31 @@ class Queue:
                     embed.set_thumbnail(url="attachment://example.jpg")
 
                     for author, value in raw_json.items():
-                        embed.add_embed_field(name='Buyer', value=self.subquery.check_identity(address=author),
+                        author = self.subquery.check_identity(address=author)
+                        lister = self.subquery.check_identity(address=value['lister'])
+
+                        embed.add_embed_field(name='Buyer',
+                                              value=f"[{author}](https://twitter.com/{author})" if '@' in author else author,
                                               inline=True)
                         if 'lister' in value:
                             embed.add_embed_field(name='Seller',
-                                                  value=self.subquery.check_identity(address=value['lister']),
+                                                  value=f"[{lister}](https://twitter.com/{lister})" if '@' in lister else lister,
                                                   inline=True)
 
                         embed.add_embed_field(name="\u200b", value=f"[:art: singular.app]({link})", inline=True)
 
                         if 'platform-fees' in value:
-                            embed.add_embed_field(name='Royalties', value=f"{value['nft-creator-royalties']} KSM",
+                            embed.add_embed_field(name='Royalties',
+                                                  value=f"{value['nft-creator-royalties']} KSM",
                                                   inline=True)
 
-                        embed.add_embed_field(name='Received', value=f"{value['nft-price']} KSM", inline=True)
+                        embed.add_embed_field(name='Received',
+                                              value=f"{value['nft-price']} KSM",
+                                              inline=True)
 
                         if 'platform-fees' in value:
-                            embed.add_embed_field(name='Platform fees', value=f"{value['platform-fees']} KSM",
+                            embed.add_embed_field(name='Platform fees',
+                                                  value=f"{value['platform-fees']} KSM",
                                                   inline=True)
                     embed.set_timestamp(timestamp=int(time.time()))
                     embed.set_footer(text='https://kusamahub.com', icon_url='https://i.imgur.com/IR7ZHk5.jpg')
