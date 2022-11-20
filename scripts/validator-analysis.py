@@ -1,7 +1,6 @@
 from subalert.validator import ValidatorWatch
 import subalert.base
 import datetime
-import json
 
 vw = ValidatorWatch()
 print("Getting validator commission.. please wait")
