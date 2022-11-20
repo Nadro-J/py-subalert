@@ -1,9 +1,8 @@
 import asyncio
 
 from subalert.base import Utils, SubQuery
-
-from .config import Configuration
-from .subq import Queue
+from subalert.config import Configuration
+from subalert.subq import Queue
 
 queue = Queue()
 
