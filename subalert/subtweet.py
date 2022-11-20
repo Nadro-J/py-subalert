@@ -22,6 +22,9 @@ class Tweet:
             access_key = config.yaml_file['twitter']['collections'][nft_collection][account]['access_token']['key']
             access_sec = config.yaml_file['twitter']['collections'][nft_collection][account]['access_token']['secret']
 
+        if not consumer_key:
+            return
+
         self.authorize = tweepy.OAuthHandler(consumer_key, consumer_sec)
         self.authorize.set_access_token(access_key, access_sec)
         self.api = tweepy.API(self.authorize, wait_on_rate_limit=True)
