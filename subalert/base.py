@@ -1,22 +1,22 @@
 import json
 import os
-import re
-from ast import literal_eval
-import uuid, random
+
 import socket
 import urllib.request
 from urllib.request import urlopen
+from datetime import datetime
 import urllib.error
-import time
 
-import tweepy
-import yaml
 import deepdiff
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from substrateinterface import SubstrateInterface
-from pathlib import Path
+
 import uuid
 from .config import Configuration
+
+from pathlib import Path
+
+file = Path(__file__).resolve()
+package_root_directory = file.parents[1]
 
 config = Configuration()
 hashtag = config.yaml_file['twitter']['hashtag']
@@ -236,49 +236,57 @@ class Imagify:
         self.footer = footer
 
     def create(self):
-        watermark = Image.open(f'logos/{hashtag}_White.png')
-        new_watermark = watermark.resize((50, 50), Image.ANTIALIAS)
+        watermark = Image.open(f'{package_root_directory}/logos/KusamaHub.png').convert('RGBA')
+        new_watermark = watermark.resize((75, 75), Image.ANTIALIAS)
         guid = uuid.uuid4()
 
-        Path("imagify/").mkdir(exist_ok=True)
-        imagify_path = f"imagify/images/{guid}.png"
+        Path(f"{package_root_directory}/imagify/").mkdir(exist_ok=True)
+        imagify_path = f"{package_root_directory}/imagify/images/{guid}.png"
 
         # background
         new_image = Image.new('RGBA', (400, 300), color='#36393f')
         new_image_draw = ImageDraw.Draw(new_image)
 
         # text font settings
-        text_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Regular.ttf", size=16)
+        text_font = ImageFont.truetype(font=f"{package_root_directory}/imagify/fonts/SourceCodePro-Regular.ttf", size=16)
         text_w, text_h = new_image_draw.textsize(self.text, text_font)
 
         # title font settings
-        title_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=22)
+        title_font = ImageFont.truetype(font=f"{package_root_directory}/imagify/fonts/SourceCodePro-Bold.ttf", size=33)
         title_w, title_h = new_image_draw.textsize(self.title, title_font)
 
         # footer font settings
-        footer_font = ImageFont.truetype(font="imagify/fonts/SourceCodePro-Bold.ttf", size=10)
+        footer_font = ImageFont.truetype(font=f"{package_root_directory}/imagify/fonts/SourceCodePro-Bold.ttf", size=12)
         footer_w, footer_h = new_image_draw.textsize(self.footer, title_font)
 
         # If the footer is the biggest element by width, adjust the box.
         # footer_w > text_w and title_w
         if title_w > footer_w or title_w > text_w:
-            modified_image = new_image.resize(size=(title_w + 75, text_h + 85))
+            modified_image = new_image.resize(size=(text_w + 75, text_h + 95))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
         elif text_w > title_w or text_w > footer_w:
-            modified_image = new_image.resize(size=(text_w + 75, text_h + 85))
+            modified_image = new_image.resize(size=(text_w + 75, text_h + 95))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
         elif footer_w > title_w or title_w < footer_w:
-            modified_image = new_image.resize(size=(footer_w + 90, text_h + 85))
+            modified_image = new_image.resize(size=(footer_w + 90, text_h + 95))
             modified_image_draw = ImageDraw.Draw(modified_image)
 
-        modified_image.paste(new_watermark, (modified_image.width - 50, text_h + 35), mask=new_watermark)
-        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#d1d0b0',
-                                 font=title_font)
-        modified_image_draw.text(xy=(10, 65), text=self.text, fill='#d1d0b0', font=text_font)
-        modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"{self.footer}", fill='#d1d0b0',
-                                 font=footer_font)
+        modified_image.paste(new_watermark, (10, 0), mask=new_watermark)
+
+        # title
+        modified_image_draw.text(xy=((modified_image.width - title_w) / 2, 10), text=self.title, fill='#BA97B3', font=title_font)
+
+        # text
+        modified_image_draw.text(xy=(10, 65), text=self.text, fill='#BAACAC', font=text_font)
+
+        # footer
+        footer_w_halved = footer_w / 2
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+        modified_image_draw.text(xy=(10, modified_image.height - 20), text=f"KusamaHub.com", fill='#BA97B3', font=footer_font, spacing=5.0)
+        modified_image_draw.text(xy=((modified_image.width - footer_w_halved) / 2, modified_image.height - 20), text=f"{self.footer}", fill='#BA97B3', font=footer_font, spacing=5.0)
+        modified_image_draw.text(xy=(modified_image.width - 125, modified_image.height - 20), text=f"{timestamp}", fill='#BA97B3', font=footer_font, spacing=5.0)
 
         bordered = ImageOps.expand(modified_image, border=2, fill='#E6007A')
         bordered.save(imagify_path)
@@ -316,31 +324,39 @@ class Utils:
         :return: Check if an NFT collection is setup for monitoring
                  Configurable via config.local.yaml
         """
-        for collection in config.yaml_file['twitter']['collections']:
+        if isinstance(identifier, list):
             for uid in identifier:
-                if collection in uid:
-                    return collection
+                for collection in config.yaml_file['twitter']['collections']:
+                    if uid in collection:
+                        return collection
+
+        for collection in config.yaml_file['twitter']['collections']:
+            if collection in identifier:
+                return collection
+
         return False
+
+
 
     @staticmethod
     def cache_data(filename, data):
-        with open(f"{filename}", 'w') as cache:
+        with open(f"{package_root_directory}/{filename}", 'w') as cache:
             cache.write(json.dumps(data, indent=4))
         cache.close()
 
     @staticmethod
     def open_cache(filename):
-        with open(filename, 'r') as cache:
+        with open(f"{package_root_directory}/{filename}", 'r') as cache:
             cached_file = json.loads(cache.read())
             cache.close()
         return cached_file
 
     def cache_difference(self, filename, data):
-        if not os.path.isfile(filename):
-            self.cache_data(filename, data)
+        if not os.path.isfile(f"{package_root_directory}/{filename}"):
+            self.cache_data(f"{package_root_directory}/{filename}", data)
             return False
 
-        cached_data = self.open_cache(filename)
+        cached_data = self.open_cache(f"{package_root_directory}/{filename}")
 
         # use DeepDiff to check if any values have changed since we ran has_commission_updated().
         difference = deepdiff.DeepDiff(cached_data, data, ignore_order=True).to_json()
@@ -371,7 +387,7 @@ class Public_API:
         self.opener.addheaders = [('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)')]
 
         urllib.request.install_opener(self.opener)
-        socket.setdefaulttimeout(60)
+        socket.setdefaulttimeout(120)
 
     def connect(self):
         try:
@@ -388,11 +404,15 @@ class Public_API:
     def retrieve_image(self, filepath):
         full_filepath = f"{filepath}/{uuid.uuid4()}.tmp"
         response = urllib.request.urlretrieve(self.url, full_filepath)
+        filesize = int(response[1]['Content-Length']) / 1000 / 1000
         content_type = response[1].get_content_type().split("/")[1]
-
-        fullpath = Path(full_filepath)
-        new_path = str(fullpath.rename(fullpath.with_suffix(f".{content_type}")))
-        return new_path
+        if filesize <= 8:
+            fullpath = Path(full_filepath)
+            new_path = str(fullpath.rename(fullpath.with_suffix(f".{content_type}")))
+            return new_path
+        else:
+            os.remove(full_filepath)
+            return None
 
     def IPFS_RMRK(self, rmrk_version):
         IPFS_data = self.connect()
@@ -410,12 +430,12 @@ class Public_API:
                     NFT_image_URL = IPFS_data['animation_url'].replace('ipfs://',
                                                                        'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL  # update URL with the one found in ['image']
-                    return self.retrieve_image("NFT")
+                    return self.retrieve_image(f"{package_root_directory}/NFT")
 
                 if 'image' in IPFS_data:
                     NFT_image_URL = IPFS_data['image'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = NFT_image_URL  # update URL with the one found in ['image']
-                    return self.retrieve_image("NFT")
+                    return self.retrieve_image(f"{package_root_directory}/NFT")
 
         elif rmrk_version == '2.0.0':
             if 'metadata' in IPFS_data[0].keys():
@@ -426,7 +446,7 @@ class Public_API:
                 if 'mediaUri' in IPFS_data:
                     metadata = IPFS_data['mediaUri'].replace('ipfs://', 'https://rmrk.mypinata.cloud/').replace(' ', '%20')
                     self.url = metadata
-                    return self.retrieve_image("NFT")
+                    return self.retrieve_image(f"{package_root_directory}/NFT")
 
 
 # change coingecko to use public API.
