@@ -1,6 +1,5 @@
 import asyncio
-import threading
-from threading import Thread
+import concurrent.futures
 
 from subalert.base import Utils
 from subalert.logger import log_events
@@ -18,7 +17,6 @@ log = log_events(filename='extrinsic-monitor.log', debug=False)
 class ExtrinsicMonitor:
     def __init__(self):
         self.previous_block_hash = []
-        self.sema = threading.Semaphore(value=10)
         self.config = Configuration()
         self.substrate = self.config.substrate
 
@@ -26,7 +24,6 @@ class ExtrinsicMonitor:
         self.loop = asyncio.get_event_loop()
 
     def inspect_extrinsic(self, block, extrinsic_types, check_receipt):
-        self.sema.acquire()
         result = self.substrate.get_block(block_number=block, ignore_decoding_errors=True)
         block_hash, extrinsics_list = result['header']['hash'], []
 
@@ -51,7 +48,6 @@ class ExtrinsicMonitor:
                     extrinsics_list.append(extrinsic.value)
         log.info(f"{len(extrinsics_list)} extrinsic(s) were successfully signed on block {block}")
         self.process_extrinsics(extrinsics=extrinsics_list)
-        self.sema.release()
         return block_hash, extrinsics_list
 
     def process_extrinsics(self, extrinsics):
@@ -82,6 +78,7 @@ class ExtrinsicMonitor:
 
         queue.clear()
         block_event_construct.clear()
+        return 'process_extrinsics complete'
 
     def new_block(self, obj, update_nr, subscription_id):
         """
@@ -104,9 +101,13 @@ class ExtrinsicMonitor:
 
             log.info("")
             log.info(f"🔨 New block: {block} produced by: {obj['author']}")
-            thread = Thread(target=self.inspect_extrinsic, daemon=True, args=(block, calls, True,))
 
-            thread.start()
-            thread.join()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(self.inspect_extrinsic, block=block, extrinsic_types=calls, check_receipt=True)]
+
+                # results from each worker.
+                for future in concurrent.futures.as_completed(futures):
+                    print(future.result())
+
         else:
             pass
